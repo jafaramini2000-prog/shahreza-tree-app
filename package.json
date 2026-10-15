@@ -1,10 +1,13 @@
 {
   "name": "shahreza-tree-survey",
-  "version": "1.0.0",
+  "version": "0.2.0",
   "private": true,
   "dependencies": {
     "@capacitor/android": "6.2.0",
-    "@capacitor/core": "6.2.0"
+    "@capacitor/core": "6.2.0",
+    "@capacitor/filesystem": "6.0.1",
+    "@capacitor/geolocation": "6.1.0",
+    "@capacitor/share": "6.0.2"
   },
   "devDependencies": {
     "@capacitor/cli": "6.2.0"
