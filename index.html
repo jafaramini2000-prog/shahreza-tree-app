@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f5a43">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<title>پایش درختان شهرضا</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="topbar">
+  <div>
+    <h1>پایش درختان شهرضا</h1>
+    <div class="sub">فاز اول مشاوره فضای سبز شهری</div>
+  </div>
+  <button id="installBtn" class="ghost hidden">نصب برنامه</button>
+</header>
+
+<nav class="tabs">
+  <button data-tab="form" class="active">ثبت درخت</button>
+  <button data-tab="records">رکوردها</button>
+  <button data-tab="dashboard">گزارش‌ها</button>
+  <button data-tab="settings">تنظیمات</button>
+</nav>
+
+<main>
+<section id="form" class="tab active">
+  <form id="treeForm">
+    <div class="card">
+      <h2>۱) اطلاعات پایه</h2>
+      <div class="grid2">
+        <label>شناسه درخت<input id="treeId" required placeholder="مثال SHR-02-BL15-0042"></label>
+        <label>نام/کد بازدیدکننده<input id="inspector" required></label>
+        <label>ناحیه<input id="zone"></label>
+        <label>معبر / بوستان<input id="place" required></label>
+        <label>گونه<input id="species" placeholder="در صورت تردید: نیازمند تأیید"></label>
+        <label>مرحله سنی<select id="ageClass"><option>جوان</option><option>نیمه‌بالغ</option><option>بالغ</option><option>کهنسال</option></select></label>
+      </div>
+      <div class="gpsline">
+        <button type="button" id="gpsBtn">ثبت GPS</button>
+        <span id="gpsText">ثبت نشده</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>۲) ابعاد و وضعیت سلامت</h2>
+      <div class="grid3">
+        <label>DBH (cm)<input id="dbh" type="number" min="0" step="0.1"></label>
+        <label>ارتفاع (m)<input id="height" type="number" min="0" step="0.1"></label>
+        <label>قطر تاج (m)<input id="crown" type="number" min="0" step="0.1"></label>
+      </div>
+      <div class="grid3">
+        <label>سلامت تاج<select id="crownScore"><option value="0">خوب</option><option value="1">خفیف</option><option value="2">متوسط</option><option value="3">شدید</option><option value="4">بحرانی</option></select></label>
+        <label>سلامت تنه<select id="trunkScore"><option value="0">خوب</option><option value="1">خفیف</option><option value="2">متوسط</option><option value="3">شدید</option><option value="4">بحرانی</option></select></label>
+        <label>ریشه/طوقه<select id="rootScore"><option value="0">خوب</option><option value="1">خفیف</option><option value="2">متوسط</option><option value="3">شدید</option><option value="4">بحرانی</option><option value="">قابل ارزیابی نبود</option></select></label>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>۳) آفت، بیماری، آبیاری و بستر</h2>
+      <div class="grid2">
+        <label>نشانه آفت<select id="pest"><option value="0">ندارد</option><option value="1">دارد - خفیف</option><option value="2">دارد - متوسط</option><option value="3">دارد - شدید</option><option value="4">دارد - بحرانی</option></select></label>
+        <label>نشانه بیماری<select id="disease"><option value="0">ندارد</option><option value="1">دارد - خفیف</option><option value="2">دارد - متوسط</option><option value="3">دارد - شدید</option><option value="4">دارد - بحرانی</option></select></label>
+        <label>آبیاری<select id="irrigation"><option value="0">مناسب</option><option value="2">کم</option><option value="2">زیاد</option><option value="3">نامنظم</option><option value="1">نامشخص</option></select></label>
+        <label>بستر<select id="site"><option value="0">مناسب</option><option value="2">فشرده</option><option value="2">کم‌حجم</option><option value="3">آب‌مانده</option><option value="2">خشک</option><option value="2">شوری مشکوک</option></select></label>
+        <label>تعارض زیرساخت<select id="conflict"><option>ندارد</option><option>جدول</option><option>آسفالت</option><option>کابل/برق</option><option>ساختمان</option><option>دید ترافیکی</option><option>سایر</option></select></label>
+        <label>اهمیت محل/تردد<select id="target"><option value="0">کم</option><option value="1">متوسط</option><option value="3">زیاد</option><option value="4">بسیار زیاد</option></select></label>
+      </div>
+      <label>شرح علائم / توضیح<textarea id="symptoms" rows="3"></textarea></label>
+    </div>
+
+    <div class="card">
+      <h2>۴) ارزیابی خطر</h2>
+      <div class="grid2">
+        <label>نقص سازه‌ای<select id="structural"><option value="0">ندارد</option><option value="1">خفیف</option><option value="2">متوسط</option><option value="3">شدید</option><option value="4">بحرانی/شکست قریب‌الوقوع</option></select></label>
+        <label>احتمال شکست<select id="failure"><option value="0">کم</option><option value="1">متوسط</option><option value="3">زیاد</option><option value="4">فوری</option></select></label>
+      </div>
+      <div class="resultbox">
+        <div>سطح خطر پیشنهادی: <b id="riskOut">D - کم</b></div>
+        <div>اولویت پیشنهادی: <b id="priorityOut">P4</b></div>
+        <div>امتیاز اولویت: <b id="scoreOut">0</b> / 100</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>۵) تصمیم مدیریتی</h2>
+      <div class="grid2">
+        <label>گروه مدیریتی<select id="management"><option value="1">گروه ۱ - قابل حفظ و سالم</option><option value="2">گروه ۲ - قابل احیا</option><option value="3">گروه ۳ - نیازمند بررسی تخصصی</option><option value="4">گروه ۴ - کاندید حذف/جایگزینی</option></select></label>
+        <label>اقدام اصلی<select id="action"><option>پایش عادی</option><option>هرس اصلاحی</option><option>ایمن‌سازی فوری</option><option>اصلاح آبیاری</option><option>اصلاح خاک/بستر</option><option>بررسی تخصصی</option><option>نمونه‌برداری</option><option>حفظ و احیا</option><option>حذف و جایگزینی</option><option>نیاز به طراحی/بازطراحی</option></select></label>
+      </div>
+      <label>عکس<input id="photo" type="file" accept="image/*" capture="environment"></label>
+      <label>یادداشت نهایی<textarea id="notes" rows="3"></textarea></label>
+    </div>
+
+    <div class="stickyActions">
+      <button type="submit" class="primary">ذخیره رکورد</button>
+      <button type="button" id="resetBtn">فرم جدید</button>
+    </div>
+  </form>
+</section>
+
+<section id="records" class="tab">
+  <div class="card">
+    <div class="toolbar">
+      <input id="search" placeholder="جستجو: کد، معبر، گونه...">
+      <button id="exportExcel">خروجی Excel</button>
+      <button id="exportCsv">CSV</button>
+    </div>
+    <div id="recordsList"></div>
+  </div>
+</section>
+
+<section id="dashboard" class="tab">
+  <div class="cards" id="kpis"></div>
+  <div class="card"><h2>توزیع گروه مدیریتی</h2><div id="groupBars"></div></div>
+  <div class="card"><h2>سطح خطر</h2><div id="riskBars"></div></div>
+  <div class="card"><h2>محدوده‌های بحرانی</h2><div id="hotspots"></div></div>
+</section>
+
+<section id="settings" class="tab">
+  <div class="card">
+    <h2>تنظیمات و پشتیبان</h2>
+    <p>این نسخه اطلاعات را روی خود گوشی ذخیره می‌کند و بدون اینترنت هم قابل استفاده است.</p>
+    <div class="toolbar">
+      <button id="backupJson">پشتیبان JSON</button>
+      <label class="buttonlike">بازیابی JSON<input id="restoreJson" type="file" accept=".json" hidden></label>
+      <button id="clearAll" class="danger">حذف همه داده‌ها</button>
+    </div>
+    <p class="muted">برای استفاده هم‌زمان چند تیم و تجمیع لحظه‌ای داده‌ها، نسخه بعدی می‌تواند به یک پایگاه داده مرکزی متصل شود.</p>
+  </div>
+</section>
+</main>
+
+<div id="toast"></div>
+<script src="app.js"></script>
+</body>
+</html>
