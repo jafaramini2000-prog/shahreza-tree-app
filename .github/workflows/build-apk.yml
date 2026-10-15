@@ -27,11 +27,16 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Bundle web app
+        run: |
+          npx esbuild app.js --bundle --platform=browser --format=iife --outfile=app.bundle.js
+          test -s app.bundle.js
+
       - name: Prepare web assets
         run: |
           rm -rf www android
           mkdir -p www
-          cp index.html app.js styles.css manifest.json sw.js icon.svg www/
+          cp index.html app.bundle.js styles.css manifest.json sw.js icon.svg www/
 
       - name: Generate Android project
         run: |
@@ -89,6 +94,7 @@ jobs:
               )
 
           build_number = int(os.environ["BUILD_NUMBER"])
+
           s = re.sub(
               r"versionCode\s+\d+",
               f"versionCode {build_number}",
