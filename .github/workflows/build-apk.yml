@@ -1,456 +1,137 @@
-[hidden]{display:none!important}
-
-:root{
-  --green:#0f5a43;
-  --green2:#197456;
-  --bg:#f3f6f4;
-  --card:#fff;
-  --line:#dce6df;
-  --text:#183027;
-  --muted:#6d7f76;
-  --danger:#a33;
-  --warn:#a36500
-}
-
-*{box-sizing:border-box}
-
-body{
-  margin:0;
-  font-family:Tahoma,Arial,sans-serif;
-  background:var(--bg);
-  color:var(--text)
-}
-
-button,input,select,textarea{font:inherit}
-
-.topbar{
-  background:var(--green);
-  color:#fff;
-  padding:14px 16px;
-  display:flex;
-  justify-content:space-between;
-  gap:12px;
-  align-items:center
-}
-
-.topbar h1{
-  font-size:18px;
-  margin:0 0 4px
-}
-
-.sub{
-  font-size:12px;
-  opacity:.85
-}
-
-.userBox{
-  display:flex;
-  gap:6px;
-  align-items:center;
-  flex-wrap:wrap
-}
-
-.syncStrip{
-  background:#eaf2ed;
-  padding:8px 12px;
-  display:flex;
-  gap:8px;
-  align-items:center;
-  flex-wrap:wrap;
-  border-bottom:1px solid var(--line);
-  font-size:12px
-}
-
-.tabs{
-  display:flex;
-  overflow:auto;
-  background:white;
-  border-bottom:1px solid var(--line);
-  position:sticky;
-  top:0;
-  z-index:5
-}
-
-.tabs button{
-  border:0;
-  background:none;
-  padding:12px 14px;
-  white-space:nowrap
-}
-
-.tabs button.active{
-  color:var(--green);
-  border-bottom:3px solid var(--green);
-  font-weight:700
-}
-
-main{
-  max-width:1100px;
-  margin:auto;
-  padding:10px
-}
-
-.tab{display:none}
-
-.tab.active{display:block}
-
-.card{
-  background:var(--card);
-  border:1px solid var(--line);
-  border-radius:14px;
-  padding:14px;
-  margin-bottom:12px;
-  box-shadow:0 2px 8px #00000008
-}
-
-.card h2{
-  font-size:16px;
-  margin:0 0 12px
-}
-
-.grid2,.grid3{
-  display:grid;
-  gap:10px
-}
-
-.grid2{
-  grid-template-columns:repeat(2,minmax(0,1fr))
-}
-
-.grid3{
-  grid-template-columns:repeat(3,minmax(0,1fr))
-}
-
-label{
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-  font-size:13px
-}
-
-input,select,textarea{
-  width:100%;
-  border:1px solid #cddbd2;
-  border-radius:9px;
-  padding:10px;
-  background:#fff
-}
-
-textarea{resize:vertical}
-
-button,.buttonlike{
-  border:1px solid #c9d8cf;
-  background:#fff;
-  border-radius:9px;
-  padding:9px 12px;
-  cursor:pointer
-}
-
-.primary{
-  background:var(--green);
-  color:#fff;
-  border-color:var(--green)
-}
-
-.wide{width:100%}
-
-.small{
-  padding:5px 8px;
-  font-size:12px
-}
-
-.notice{
-  background:#eef7f1;
-  border:1px solid #cfe4d6;
-  padding:9px;
-  border-radius:9px;
-  margin-bottom:10px;
-  font-size:12px
-}
-
-.idpreview,.resultbox{
-  background:#f7faf8;
-  border:1px dashed #b9d0c0;
-  border-radius:10px;
-  padding:10px;
-  display:flex;
-  justify-content:space-between;
-  gap:8px;
-  flex-wrap:wrap
-}
-
-.gpsline,.toolbar,.legend{
-  display:flex;
-  gap:8px;
-  align-items:center;
-  flex-wrap:wrap;
-  margin-top:10px
-}
-
-.stickyActions{
-  position:sticky;
-  bottom:0;
-  background:#f3f6f4dd;
-  backdrop-filter:blur(8px);
-  padding:10px;
-  display:flex;
-  gap:8px
-}
-
-.pill,.status{
-  display:inline-block;
-  padding:3px 7px;
-  border-radius:999px;
-  font-size:11px
-}
-
-.pill{
-  background:#d8eadf;
-  color:#164c38
-}
-
-.status.synced{
-  background:#d9f0e3;
-  color:#155e3d
-}
-
-.status.pending{
-  background:#fff0c9;
-  color:#7f5700
-}
-
-.status.conflict{
-  background:#ffdcdc;
-  color:#892323
-}
-
-.record{
-  border:1px solid var(--line);
-  border-radius:12px;
-  padding:10px;
-  margin:8px 0;
-  background:white
-}
-
-.recordHead{
-  display:flex;
-  justify-content:space-between;
-  gap:8px;
-  align-items:flex-start
-}
-
-.recordMeta{
-  font-size:12px;
-  color:var(--muted);
-  margin-top:4px
-}
-
-.cards{
-  display:grid;
-  grid-template-columns:repeat(4,minmax(0,1fr));
-  gap:10px;
-  margin-bottom:10px
-}
-
-.kpi{
-  background:white;
-  border:1px solid var(--line);
-  border-radius:12px;
-  padding:12px
-}
-
-.kpi b{
-  font-size:24px;
-  display:block
-}
-
-.barrow{
-  display:grid;
-  grid-template-columns:110px 1fr 50px;
-  gap:8px;
-  align-items:center;
-  margin:8px 0
-}
-
-.bar{
-  height:12px;
-  background:#e7eeea;
-  border-radius:999px;
-  overflow:hidden
-}
-
-.bar i{
-  display:block;
-  height:100%;
-  background:var(--green2)
-}
-
-.muted{
-  color:var(--muted);
-  font-size:12px
-}
-
-.tiny{font-size:11px}
-
-.listbox{
-  padding:10px;
-  border:1px solid var(--line);
-  border-radius:10px;
-  margin:8px 0
-}
-
-.listbox div{
-  margin-top:6px;
-  font-size:12px;
-  line-height:1.9
-}
-
-.photoPreview{
-  display:flex;
-  gap:8px;
-  flex-wrap:wrap;
-  margin:8px 0
-}
-
-.photoPreview img,.detailPhotos img{
-  width:100px;
-  height:100px;
-  object-fit:cover;
-  border-radius:10px;
-  border:1px solid var(--line)
-}
-
-dialog{
-  border:0;
-  border-radius:16px;
-  width:min(92vw,760px);
-  max-height:85vh;
-  overflow:auto
-}
-
-.dialogHead{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  position:sticky;
-  top:0;
-  background:white;
-  padding:10px;
-  border-bottom:1px solid var(--line)
-}
-
-#toast{
-  position:fixed;
-  left:50%;
-  bottom:20px;
-  transform:translateX(-50%);
-  background:#173c2e;
-  color:#fff;
-  padding:9px 14px;
-  border-radius:10px;
-  opacity:0;
-  pointer-events:none;
-  transition:.2s;
-  z-index:99
-}
-
-#toast.show{opacity:1}
-
-.authGate{
-  min-height:100vh;
-  display:grid;
-  place-items:center;
-  padding:20px;
-  background:linear-gradient(145deg,#0f5a43,#143b30)
-}
-
-.authCard{
-  width:min(420px,100%);
-  background:white;
-  border-radius:18px;
-  padding:22px;
-  box-shadow:0 20px 60px #0004
-}
-
-.authCard h1{
-  text-align:center;
-  font-size:20px
-}
-
-.authCard>p{
-  text-align:center;
-  color:var(--muted)
-}
-
-.brandMark{
-  text-align:center;
-  font-size:52px
-}
-
-.authTabs{
-  display:flex;
-  margin:12px 0;
-  border:1px solid var(--line);
-  border-radius:10px;
-  overflow:hidden
-}
-
-.authTabs button{
-  flex:1;
-  border:0;
-  border-radius:0
-}
-
-.authTabs .active{
-  background:#e6f2eb;
-  color:var(--green);
-  font-weight:700
-}
-
-.authMsg{
-  min-height:22px;
-  margin-top:8px;
-  font-size:12px;
-  color:var(--danger)
-}
-
-.teamRow{
-  display:grid;
-  grid-template-columns:1fr 110px 90px;
-  gap:8px;
-  align-items:center;
-  border-bottom:1px solid var(--line);
-  padding:9px 0
-}
-
-.danger{
-  color:#fff;
-  background:var(--danger)
-}
-
-@media(max-width:700px){
-  .grid2,.grid3{
-    grid-template-columns:1fr
-  }
-
-  .cards{
-    grid-template-columns:repeat(2,1fr)
-  }
-
-  .topbar{
-    align-items:flex-start;
-    flex-direction:column
-  }
-
-  .barrow{
-    grid-template-columns:90px 1fr 40px
-  }
-
-  .teamRow{
-    grid-template-columns:1fr
-  }
-
-  .userBox{
-    width:100%
-  }
-}
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Bundle web app
+        run: |
+          npx esbuild app.js --bundle --platform=browser --format=iife --outfile=app.bundle.js
+          test -s app.bundle.js
+
+      - name: Prepare web assets
+        run: |
+          rm -rf www android
+          mkdir -p www
+          cp index.html app.bundle.js styles.css manifest.json sw.js icon.svg www/
+
+      - name: Generate Android project
+        run: |
+          npx cap add android
+          npx cap sync android
+
+      - name: Add location permissions
+        run: |
+          python3 -c "from pathlib import Path; p=Path('android/app/src/main/AndroidManifest.xml'); s=p.read_text(); m='<application'; perms='<uses-permission android:name=\"android.permission.ACCESS_FINE_LOCATION\" />\n<uses-permission android:name=\"android.permission.ACCESS_COARSE_LOCATION\" />\n'; p.write_text(s if 'ACCESS_FINE_LOCATION' in s else s.replace(m,perms+m))"
+
+      - name: Restore release keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/release.keystore
+          test -s android/app/release.keystore
+
+      - name: Configure release signing and version
+        env:
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          import json, os, re
+
+          p = Path("android/app/build.gradle")
+          s = p.read_text()
+
+          signing = """
+              signingConfigs {
+                  release {
+                      storeFile file("release.keystore")
+                      storePassword System.getenv("ANDROID_STORE_PASSWORD")
+                      keyAlias System.getenv("ANDROID_KEY_ALIAS")
+                      keyPassword System.getenv("ANDROID_KEY_PASSWORD")
+                  }
+              }
+          """
+
+          if "signingConfig signingConfigs.release" not in s:
+              s = s.replace(
+                  "    buildTypes {\n        release {",
+                  "    buildTypes {\n        release {\n            signingConfig signingConfigs.release",
+                  1
+              )
+
+          if "signingConfigs {" not in s:
+              s = s.replace(
+                  "    buildTypes {",
+                  signing + "\n    buildTypes {",
+                  1
+              )
+
+          build_number = int(os.environ["BUILD_NUMBER"])
+
+          s = re.sub(
+              r"versionCode\s+\d+",
+              f"versionCode {build_number}",
+              s,
+              count=1
+          )
+
+          try:
+              version_name = json.loads(
+                  Path("package.json").read_text()
+              ).get("version", "0.3.0")
+          except Exception:
+              version_name = "0.3.0"
+
+          s = re.sub(
+              r'versionName\s+"[^"]+"',
+              f'versionName "{version_name}"',
+              s,
+              count=1
+          )
+
+          p.write_text(s)
+          PY
+
+      - name: Build signed release APK
+        env:
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleRelease
+          cp app/build/outputs/apk/release/app-release.apk ../ShahrezaTreeSurvey.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ShahrezaTreeSurvey-APK
+          path: ShahrezaTreeSurvey.apk
+          if-no-files-found: error
