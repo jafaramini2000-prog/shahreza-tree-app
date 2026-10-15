@@ -74,14 +74,19 @@ jobs:
               }
           """
 
-          if "signingConfigs {" not in s:
-              s = s.replace("    buildTypes {", signing + "\n    buildTypes {", 1)
+          if "signingConfig signingConfigs.release" not in s:
+              s = s.replace(
+                  "    buildTypes {\n        release {",
+                  "    buildTypes {\n        release {\n            signingConfig signingConfigs.release",
+                  1
+              )
 
-          s = s.replace(
-              "        release {",
-              "        release {\n            signingConfig signingConfigs.release",
-              1
-          )
+          if "signingConfigs {" not in s:
+              s = s.replace(
+                  "    buildTypes {",
+                  signing + "\n    buildTypes {",
+                  1
+              )
 
           build_number = int(os.environ["BUILD_NUMBER"])
           s = re.sub(
