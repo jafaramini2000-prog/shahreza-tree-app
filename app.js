@@ -1,114 +1,34 @@
-
-const DB="shahrezaTreeSurveyV1";
-let records=JSON.parse(localStorage.getItem(DB)||"[]");
-let editingId=null, lat=null, lon=null, photoData=null;
-const $=id=>document.getElementById(id);
+const DB="shahrezaTreeSurveyV2",CFG="shahrezaTreeSurveyListsV1";
+let records=JSON.parse(localStorage.getItem(DB)||"[]"),cfg=JSON.parse(localStorage.getItem(CFG)||'{"zones":[],"streets":[],"sections":[]}'),editingId=null,lat=null,lon=null,photoData=null;
+const $=id=>document.getElementById(id),esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
 function toast(s){let t=$("toast");t.textContent=s;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),1800)}
-document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{document.querySelectorAll(".tabs button,.tab").forEach(x=>x.classList.remove("active"));b.classList.add("active");$(b.dataset.tab).classList.add("active");if(b.dataset.tab==="records") renderRecords(); if(b.dataset.tab==="dashboard") renderDashboard()})
-
-let deferredPrompt;
-window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredPrompt=e;$("installBtn").classList.remove("hidden")});
-$("installBtn").onclick=async()=>{if(deferredPrompt){deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;$("installBtn").classList.add("hidden")}};
-
+document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{document.querySelectorAll(".tabs button,.tab").forEach(x=>x.classList.remove("active"));b.classList.add("active");$(b.dataset.tab).classList.add("active");if(b.dataset.tab==="records")renderRecords();if(b.dataset.tab==="dashboard")renderDashboard();if(b.dataset.tab==="settings")renderLists()});
+function persist(){localStorage.setItem(DB,JSON.stringify(records))}function persistCfg(){localStorage.setItem(CFG,JSON.stringify(cfg));refreshSelects()}
+function fillSelect(id,a){let s=$(id),old=s.value;s.innerHTML='<option value="">انتخاب کنید</option>'+a.map(x=>`<option>${esc(x)}</option>`).join("");if(a.includes(old))s.value=old}
+function refreshSelects(){fillSelect("zone",cfg.zones);fillSelect("street",cfg.streets);fillSelect("section",cfg.sections)}
+function renderLists(){["zones","streets","sections"].forEach(k=>$(k+"List").innerHTML=cfg[k].length?cfg[k].map(x=>`<span class="chip">${esc(x)}</span>`).join(""):"<span class='muted'>هنوز موردی ثبت نشده.</span>")}
+function addCfg(k,id){let v=$(id).value.trim();if(!v)return;if(!cfg[k].includes(v))cfg[k].push(v);$(id).value="";persistCfg();renderLists();toast("اضافه شد")}
+$("addZone").onclick=()=>addCfg("zones","newZone");$("addStreet").onclick=()=>addCfg("streets","newStreet");$("addSection").onclick=()=>addCfg("sections","newSection");
+$("importLists").onclick=()=>{[["zones","bulkZones"],["streets","bulkStreets"],["sections","bulkSections"]].forEach(([k,id])=>{let a=$(id).value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);cfg[k]=[...new Set([...cfg[k],...a])]});persistCfg();renderLists();toast("فهرست‌ها ثبت شد")};
 function n(id){let v=parseFloat($(id).value);return isNaN(v)?0:v}
-function calc(){
-  let health=Math.max(n("crownScore"),n("trunkScore"),n("rootScore"));
-  let bio=Math.max(n("pest"),n("disease"));
-  let env=Math.max(n("irrigation"),n("site"));
-  let risk=Math.max(n("structural"),n("failure"));
-  let target=n("target");
-  let score=Math.round((health/4)*30+(risk/4)*35+(bio/4)*15+(env/4)*10+(target/4)*10);
-  let priority=score>=75?"P1":score>=50?"P2":score>=25?"P3":"P4";
-  let riskTxt=risk>=4?"A - فوری":risk>=3?"B - زیاد":risk>=2?"C - متوسط":"D - کم";
-  $("scoreOut").textContent=score;$("priorityOut").textContent=priority;$("riskOut").textContent=riskTxt;
-  return {score,priority,riskTxt};
-}
+function calc(){let h=Math.max(n("crownScore"),n("trunkScore"),n("rootScore")),b=Math.max(n("pest"),n("disease")),e=Math.max(n("irrigation"),n("site")),r=Math.max(n("structural"),n("failure")),t=n("target"),score=Math.round(h/4*30+r/4*35+b/4*15+e/4*10+t/4*10),priority=score>=75?"P1":score>=50?"P2":score>=25?"P3":"P4",riskTxt=r>=4?"A - فوری":r>=3?"B - زیاد":r>=2?"C - متوسط":"D - کم";$("scoreOut").textContent=score;$("priorityOut").textContent=priority;$("riskOut").textContent=riskTxt;return{score,priority,riskTxt}}
 ["crownScore","trunkScore","rootScore","pest","disease","irrigation","site","structural","failure","target"].forEach(id=>$(id).addEventListener("change",calc));
-
-$("gpsBtn").onclick=()=>{if(!navigator.geolocation)return toast("GPS در دسترس نیست");$("gpsText").textContent="در حال دریافت...";navigator.geolocation.getCurrentPosition(p=>{lat=p.coords.latitude;lon=p.coords.longitude;$("gpsText").textContent=`${lat.toFixed(6)}, ${lon.toFixed(6)}`},e=>{$("gpsText").textContent="خطا در GPS";toast("اجازه دسترسی به موقعیت را بررسی کنید")},{enableHighAccuracy:true,timeout:12000})}
-
+$("gpsBtn").onclick=()=>{if(!navigator.geolocation)return toast("GPS در دسترس نیست");$("gpsText").textContent="در حال دریافت...";navigator.geolocation.getCurrentPosition(p=>{lat=p.coords.latitude;lon=p.coords.longitude;$("gpsText").textContent=`${lat.toFixed(6)}, ${lon.toFixed(6)}`},()=>{$("gpsText").textContent="خطا در GPS";toast("مجوز موقعیت مکانی را فعال کنید")},{enableHighAccuracy:true,timeout:15000})};
 $("photo").onchange=()=>{let f=$("photo").files[0];if(!f){photoData=null;return}let r=new FileReader();r.onload=()=>photoData=r.result;r.readAsDataURL(f)};
-
-function resetForm(){
-  $("treeForm").reset(); editingId=null; lat=lon=photoData=null;$("gpsText").textContent="ثبت نشده";calc();
-}
-$("resetBtn").onclick=resetForm;
-
-$("treeForm").onsubmit=e=>{
-  e.preventDefault(); let c=calc();
-  let rec={
-    uid:editingId||crypto.randomUUID(), treeId:$("treeId").value.trim(), visitDate:new Date().toISOString(),
-    inspector:$("inspector").value.trim(), zone:$("zone").value.trim(), place:$("place").value.trim(),
-    species:$("species").value.trim(), ageClass:$("ageClass").value, lat, lon,
-    dbh:$("dbh").value, height:$("height").value, crown:$("crown").value,
-    crownScore:$("crownScore").value,trunkScore:$("trunkScore").value,rootScore:$("rootScore").value,
-    pest:$("pest").value,disease:$("disease").value,irrigation:$("irrigation").value,site:$("site").value,
-    conflict:$("conflict").value,target:$("target").value,symptoms:$("symptoms").value.trim(),
-    structural:$("structural").value,failure:$("failure").value,risk:c.riskTxt,score:c.score,priority:c.priority,
-    management:$("management").value,action:$("action").value,notes:$("notes").value.trim(),photo:photoData
-  };
-  let dup=records.find(x=>x.treeId===rec.treeId && x.uid!==rec.uid);
-  if(dup && !confirm("برای این شناسه قبلاً رکورد وجود دارد. ذخیره شود؟"))return;
-  let i=records.findIndex(x=>x.uid===rec.uid); if(i>=0)records[i]=rec;else records.push(rec);
-  persist();toast("رکورد ذخیره شد");resetForm();
-}
-function persist(){localStorage.setItem(DB,JSON.stringify(records))}
-function labelScore(v){return ["خوب","خفیف","متوسط","شدید","بحرانی"][parseInt(v)]||"NA"}
-function renderRecords(){
-  let q=$("search").value.trim().toLowerCase();
-  let arr=records.filter(r=>!q||[r.treeId,r.place,r.zone,r.species,r.inspector].join(" ").toLowerCase().includes(q)).slice().reverse();
-  $("recordsList").innerHTML=arr.length?arr.map(r=>`<div class="record">
-    <div class="recordhead"><b>${esc(r.treeId)}</b><span class="badge">${esc(r.priority)} | گروه ${esc(r.management)}</span></div>
-    <div>${esc(r.place)} — ${esc(r.species||"گونه ثبت نشده")}</div>
-    <div class="small">خطر: ${esc(r.risk)} | امتیاز: ${r.score} | اقدام: ${esc(r.action)}</div>
-    <div class="recordActions"><button onclick="editRec('${r.uid}')">ویرایش</button><button onclick="deleteRec('${r.uid}')">حذف</button></div>
-  </div>`).join(""):"<p class='muted'>رکوردی ثبت نشده است.</p>";
-}
+function resetForm(){$("treeForm").reset();editingId=null;lat=lon=photoData=null;$("gpsText").textContent="ثبت نشده";refreshSelects();calc()}$("resetBtn").onclick=resetForm;
+$("treeForm").onsubmit=e=>{e.preventDefault();let c=calc(),rec={uid:editingId||crypto.randomUUID(),treeId:$("treeId").value.trim(),visitDate:new Date().toISOString(),inspector:$("inspector").value.trim(),zone:$("zone").value,areaType:$("areaType").value,street:$("street").value,section:$("section").value,side:$("side").value,landmark:$("landmark").value.trim(),species:$("species").value.trim(),ageClass:$("ageClass").value,lat,lon,dbh:$("dbh").value,height:$("height").value,crown:$("crown").value,crownScore:$("crownScore").value,trunkScore:$("trunkScore").value,rootScore:$("rootScore").value,pest:$("pest").value,disease:$("disease").value,irrigation:$("irrigation").value,site:$("site").value,conflict:$("conflict").value,target:$("target").value,symptoms:$("symptoms").value.trim(),structural:$("structural").value,failure:$("failure").value,risk:c.riskTxt,score:c.score,priority:c.priority,management:$("management").value,action:$("action").value,notes:$("notes").value.trim(),photo:photoData};let dup=records.find(x=>x.treeId===rec.treeId&&x.uid!==rec.uid);if(dup&&!confirm("این شناسه قبلاً ثبت شده. ذخیره شود؟"))return;let i=records.findIndex(x=>x.uid===rec.uid);i>=0?records[i]=rec:records.push(rec);persist();toast("رکورد ذخیره شد");resetForm()};
+function labelScore(v){return["خوب","خفیف","متوسط","شدید","بحرانی"][parseInt(v)]||"NA"}
+function renderRecords(){let q=$("search").value.trim().toLowerCase(),a=records.filter(r=>!q||[r.treeId,r.street,r.section,r.zone,r.species,r.inspector].join(" ").toLowerCase().includes(q)).slice().reverse();$("recordsList").innerHTML=a.length?a.map(r=>`<div class="record"><div class="recordhead"><b>${esc(r.treeId)}</b><span class="badge">${esc(r.priority)} | گروه ${esc(r.management)}</span></div><div>${esc(r.street)} ${r.section?("– "+esc(r.section)):""} — ${esc(r.species||"گونه ثبت نشده")}</div><div class="small">${esc(r.zone)} | خطر: ${esc(r.risk)} | اقدام: ${esc(r.action)}</div><div class="recordActions"><button onclick="editRec('${r.uid}')">ویرایش</button><button onclick="deleteRec('${r.uid}')">حذف</button></div></div>`).join(""):"<p class='muted'>رکوردی ثبت نشده است.</p>"}
 $("search").oninput=renderRecords;
-function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
-window.deleteRec=id=>{if(confirm("این رکورد حذف شود؟")){records=records.filter(r=>r.uid!==id);persist();renderRecords();renderDashboard()}}
-window.editRec=id=>{let r=records.find(x=>x.uid===id);if(!r)return;editingId=id;["treeId","inspector","zone","place","species","ageClass","dbh","height","crown","crownScore","trunkScore","rootScore","pest","disease","irrigation","site","conflict","target","symptoms","structural","failure","management","action","notes"].forEach(k=>{if($(k))$(k).value=r[k]??""});lat=r.lat;lon=r.lon;photoData=r.photo;$("gpsText").textContent=lat?`${lat.toFixed(6)}, ${lon.toFixed(6)}`:"ثبت نشده";calc();document.querySelector('[data-tab="form"]').click();window.scrollTo(0,0)}
-
-function renderDashboard(){
- let total=records.length, p1=records.filter(r=>r.priority==="P1").length, g4=records.filter(r=>r.management==="4").length, flagged=records.filter(r=>+r.pest>0||+r.disease>0).length;
- $("kpis").innerHTML=[["کل رکورد",total],["P1 فوری",p1],["گروه ۴",g4],["دارای علامت آفت/بیماری",flagged]].map(x=>`<div class="kpi"><span>${x[0]}</span><b>${x[1]}</b></div>`).join("");
- bars("groupBars",["1","2","3","4"].map(k=>["گروه "+k,records.filter(r=>r.management===k).length]),total);
- let risks=["A - فوری","B - زیاد","C - متوسط","D - کم"];bars("riskBars",risks.map(k=>[k,records.filter(r=>r.risk===k).length]),total);
- let m={};records.forEach(r=>{let k=(r.zone+" "+r.place).trim()||"نامشخص";m[k]??={n:0,bad:0};m[k].n++;if(r.priority==="P1"||r.priority==="P2"||r.management==="4")m[k].bad++});
- let hot=Object.entries(m).map(([k,v])=>[k,v.bad,v.n,v.n?Math.round(v.bad/v.n*100):0]).sort((a,b)=>b[3]-a[3]).slice(0,10);
- $("hotspots").innerHTML=hot.length?hot.map(x=>`<div class="record"><b>${esc(x[0])}</b><div class="small">${x[1]} مورد اولویت‌دار از ${x[2]} رکورد (${x[3]}٪)</div></div>`).join(""):"<p class='muted'>داده کافی وجود ندارد.</p>";
-}
-function bars(id,arr,total){$(id).innerHTML=arr.map(([k,v])=>{let p=total?Math.round(v/total*100):0;return `<div class="barrow"><span>${k}</span><div class="bar"><i style="width:${p}%"></i></div><b>${v}</b></div>`}).join("")}
-
-function flat(r){return {
- "شناسه درخت":r.treeId,"تاریخ بازدید":r.visitDate,"بازدیدکننده":r.inspector,"ناحیه":r.zone,"معبر/بوستان":r.place,
- "گونه":r.species,"مرحله سنی":r.ageClass,"عرض جغرافیایی":r.lat,"طول جغرافیایی":r.lon,"DBH_cm":r.dbh,"ارتفاع_m":r.height,"قطر تاج_m":r.crown,
- "سلامت تاج":labelScore(r.crownScore),"سلامت تنه":labelScore(r.trunkScore),"ریشه/طوقه":labelScore(r.rootScore),
- "شدت آفت":r.pest,"شدت بیماری":r.disease,"آبیاری کد":r.irrigation,"بستر کد":r.site,"تعارض":r.conflict,
- "علائم/توضیح":r.symptoms,"نقص سازه‌ای":r.structural,"احتمال شکست":r.failure,"سطح خطر":r.risk,"امتیاز اولویت":r.score,"اولویت":r.priority,
- "گروه مدیریتی":r.management,"اقدام":r.action,"یادداشت":r.notes
-}}
-function download(name,content,type){let b=new Blob([content],{type});let a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
-$("exportCsv").onclick=()=>{
- let arr=records.map(flat);if(!arr.length)return toast("داده‌ای وجود ندارد");let hs=Object.keys(arr[0]);
- let q=s=>'"'+String(s??"").replaceAll('"','""')+'"';let csv="\uFEFF"+hs.map(q).join(",")+"\n"+arr.map(r=>hs.map(h=>q(r[h])).join(",")).join("\n");
- download("Shahreza_Trees.csv",csv,"text/csv;charset=utf-8");toast("CSV ساخته شد")
-}
-$("exportExcel").onclick=()=>{
- let arr=records.map(flat);if(!arr.length)return toast("داده‌ای وجود ندارد");
- let hs=Object.keys(arr[0]);let xml=`<?xml version="1.0"?><?mso-application progid="Excel.Sheet"?>
- <Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
- <Worksheet ss:Name="Trees"><Table>`;
- xml+="<Row>"+hs.map(h=>`<Cell><Data ss:Type="String">${xmlEsc(h)}</Data></Cell>`).join("")+"</Row>";
- arr.forEach(r=>xml+="<Row>"+hs.map(h=>`<Cell><Data ss:Type="String">${xmlEsc(r[h])}</Data></Cell>`).join("")+"</Row>");
- xml+="</Table></Worksheet></Workbook>";
- download("Shahreza_Trees.xls","\uFEFF"+xml,"application/vnd.ms-excel");toast("فایل Excel ساخته شد")
-}
-function xmlEsc(s){return String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}
-
-$("backupJson").onclick=()=>download("Shahreza_Trees_Backup.json",JSON.stringify(records,null,2),"application/json");
-$("restoreJson").onchange=e=>{let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{try{let x=JSON.parse(r.result);if(!Array.isArray(x))throw 0;records=x;persist();renderDashboard();toast("پشتیبان بازیابی شد")}catch{toast("فایل معتبر نیست")}};r.readAsText(f)}
-$("clearAll").onclick=()=>{if(confirm("همه داده‌های این گوشی حذف شود؟")){records=[];persist();renderDashboard();renderRecords();toast("داده‌ها حذف شد")}}
-
-if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
-calc();renderDashboard();
+window.deleteRec=id=>{if(confirm("حذف شود؟")){records=records.filter(r=>r.uid!==id);persist();renderRecords();renderDashboard()}};
+window.editRec=id=>{let r=records.find(x=>x.uid===id);if(!r)return;editingId=id;["treeId","inspector","zone","areaType","street","section","side","landmark","species","ageClass","dbh","height","crown","crownScore","trunkScore","rootScore","pest","disease","irrigation","site","conflict","target","symptoms","structural","failure","management","action","notes"].forEach(k=>{if($(k))$(k).value=r[k]??""});lat=r.lat;lon=r.lon;photoData=r.photo;$("gpsText").textContent=lat?`${lat.toFixed(6)}, ${lon.toFixed(6)}`:"ثبت نشده";calc();document.querySelector('[data-tab="form"]').click();window.scrollTo(0,0)};
+function bars(id,a,total){$(id).innerHTML=a.map(([k,v])=>{let p=total?Math.round(v/total*100):0;return`<div class="barrow"><span>${k}</span><div class="bar"><i style="width:${p}%"></i></div><b>${v}</b></div>`}).join("")}
+function renderDashboard(){let total=records.length,p1=records.filter(r=>r.priority==="P1").length,g4=records.filter(r=>r.management==="4").length,flagged=records.filter(r=>+r.pest>0||+r.disease>0).length;$("kpis").innerHTML=[["کل رکورد",total],["P1 فوری",p1],["گروه ۴",g4],["دارای علامت آفت/بیماری",flagged]].map(x=>`<div class="kpi"><span>${x[0]}</span><b>${x[1]}</b></div>`).join("");bars("groupBars",["1","2","3","4"].map(k=>["گروه "+k,records.filter(r=>r.management===k).length]),total);let risks=["A - فوری","B - زیاد","C - متوسط","D - کم"];bars("riskBars",risks.map(k=>[k,records.filter(r=>r.risk===k).length]),total);let m={};records.forEach(r=>{let k=[r.zone,r.street,r.section].filter(Boolean).join(" / ")||"نامشخص";m[k]??={n:0,bad:0};m[k].n++;if(r.priority==="P1"||r.priority==="P2"||r.management==="4")m[k].bad++});let hot=Object.entries(m).map(([k,v])=>[k,v.bad,v.n,v.n?Math.round(v.bad/v.n*100):0]).sort((a,b)=>b[3]-a[3]).slice(0,15);$("hotspots").innerHTML=hot.length?hot.map(x=>`<div class="record"><b>${esc(x[0])}</b><div class="small">${x[1]} مورد اولویت‌دار از ${x[2]} رکورد (${x[3]}٪)</div></div>`).join(""):"<p class='muted'>داده کافی وجود ندارد.</p>"}
+function flat(r){return{"شناسه درخت":r.treeId,"تاریخ بازدید":r.visitDate,"بازدیدکننده":r.inspector,"ناحیه":r.zone,"نوع محدوده":r.areaType,"خیابان/بوستان":r.street,"بخش/قطعه":r.section,"سمت":r.side,"نقطه مرجع":r.landmark,"گونه":r.species,"مرحله سنی":r.ageClass,"عرض جغرافیایی":r.lat,"طول جغرافیایی":r.lon,"DBH_cm":r.dbh,"ارتفاع_m":r.height,"قطر تاج_m":r.crown,"سلامت تاج":labelScore(r.crownScore),"سلامت تنه":labelScore(r.trunkScore),"ریشه/طوقه":labelScore(r.rootScore),"شدت آفت":r.pest,"شدت بیماری":r.disease,"آبیاری کد":r.irrigation,"بستر کد":r.site,"تعارض":r.conflict,"علائم/توضیح":r.symptoms,"نقص سازه‌ای":r.structural,"احتمال شکست":r.failure,"سطح خطر":r.risk,"امتیاز اولویت":r.score,"اولویت":r.priority,"گروه مدیریتی":r.management,"اقدام":r.action,"یادداشت":r.notes}}
+function download(name,content,type){let b=new Blob([content],{type}),a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+$("exportCsv").onclick=()=>{let a=records.map(flat);if(!a.length)return toast("داده‌ای وجود ندارد");let hs=Object.keys(a[0]),q=s=>'"'+String(s??"").replaceAll('"','""')+'"';download("Shahreza_Trees.csv","\uFEFF"+hs.map(q).join(",")+"\n"+a.map(r=>hs.map(h=>q(r[h])).join(",")).join("\n"),"text/csv;charset=utf-8")};
+$("exportExcel").onclick=()=>{let a=records.map(flat);if(!a.length)return toast("داده‌ای وجود ندارد");let hs=Object.keys(a[0]),xe=s=>String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"),xml='<?xml version="1.0"?><?mso-application progid="Excel.Sheet"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Worksheet ss:Name="Trees"><Table>';xml+="<Row>"+hs.map(h=>`<Cell><Data ss:Type="String">${xe(h)}</Data></Cell>`).join("")+"</Row>";a.forEach(r=>xml+="<Row>"+hs.map(h=>`<Cell><Data ss:Type="String">${xe(r[h])}</Data></Cell>`).join("")+"</Row>");xml+="</Table></Worksheet></Workbook>";download("Shahreza_Trees.xls","\uFEFF"+xml,"application/vnd.ms-excel")};
+$("backupJson").onclick=()=>download("Shahreza_Trees_Backup.json",JSON.stringify({records,cfg},null,2),"application/json");
+$("restoreJson").onchange=e=>{let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{try{let x=JSON.parse(r.result);records=Array.isArray(x)?x:(x.records||[]);if(x.cfg)cfg=x.cfg;persist();persistCfg();renderDashboard();toast("بازیابی شد")}catch{toast("فایل معتبر نیست")}};r.readAsText(f)};
+$("clearAll").onclick=()=>{if(confirm("همه رکوردها حذف شوند؟")){records=[];persist();renderDashboard();renderRecords();toast("حذف شد")}};
+refreshSelects();calc();renderDashboard();

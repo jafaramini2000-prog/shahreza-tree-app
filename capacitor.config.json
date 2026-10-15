@@ -1,0 +1,8 @@
+{
+  "appId": "ir.shahreza.treesurvey",
+  "appName": "پایش درختان شهرضا",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  }
+}
