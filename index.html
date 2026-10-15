@@ -10,112 +10,98 @@
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<header class="topbar"><div><h1>سامانه شناسنامه درختان شهرضا</h1><div class="sub">نسخه ۰.۲ آزمایشی • فاز اول مشاوره فضای سبز شهری</div></div></header>
+<div id="authGate" class="authGate">
+  <div class="authCard">
+    <div class="brandMark">🌳</div>
+    <h1>سامانه شناسنامه درختان شهرضا</h1>
+    <p>نسخه ۰.۳ چندکاربره و آفلاین‌محور</p>
+    <div class="authTabs"><button id="loginTab" class="active">ورود</button><button id="signupTab">ثبت‌نام</button></div>
+    <div id="loginPane">
+      <label>ایمیل<input id="loginEmail" type="email" autocomplete="email"></label>
+      <label>رمز عبور<input id="loginPassword" type="password" autocomplete="current-password"></label>
+      <button id="loginBtn" class="primary wide">ورود</button>
+    </div>
+    <div id="signupPane" hidden>
+      <label>نام و نام خانوادگی<input id="signupName"></label>
+      <label>ایمیل<input id="signupEmail" type="email"></label>
+      <label>رمز عبور<input id="signupPassword" type="password" minlength="6"></label>
+      <button id="signupBtn" class="primary wide">ساخت حساب</button>
+      <p class="muted tiny">اولین حساب می‌تواند مدیر اولیه پروژه شود؛ حساب‌های بعدی به‌صورت کارشناس ساخته می‌شوند.</p>
+    </div>
+    <div id="offlineEntry" hidden>
+      <div class="notice">ارتباط با سرور در دسترس نیست، اما اطلاعات محلی این گوشی موجود است.</div>
+      <button id="continueOfflineBtn" class="wide">ادامه آفلاین</button>
+    </div>
+    <div id="authMsg" class="authMsg"></div>
+  </div>
+</div>
+
+<div id="appShell" hidden>
+<header class="topbar">
+  <div><h1>سامانه شناسنامه درختان شهرضا</h1><div class="sub">نسخه ۰.۳ • Local + Supabase Sync</div></div>
+  <div class="userBox"><span id="userName">—</span><span id="userRole" class="pill">—</span><button id="logoutBtn" class="small">خروج</button></div>
+</header>
+<div class="syncStrip">
+  <span id="netStatus" class="pill">وضعیت شبکه</span>
+  <span id="syncStatus">همگام‌سازی بررسی نشده</span>
+  <button id="syncNowBtn" class="small">همگام‌سازی الآن</button>
+</div>
 <nav class="tabs">
-<button data-tab="form" class="active">ثبت درخت</button>
-<button data-tab="records">رکوردها</button>
-<button data-tab="dashboard">گزارش‌ها</button>
-<button data-tab="settings">اطلاعات پایه</button>
+  <button data-tab="form" class="active">ثبت درخت</button>
+  <button data-tab="records">رکوردها</button>
+  <button data-tab="dashboard">گزارش‌ها</button>
+  <button data-tab="settings">اطلاعات پایه</button>
+  <button data-tab="team" id="teamTabBtn" hidden>تیم</button>
 </nav>
 <main>
 <section id="form" class="tab active">
 <form id="treeForm">
 <div class="card">
 <h2>۱) محل و مشخصات پایه</h2>
-<div class="notice">شناسه درخت توسط سامانه و بعد از تکمیل اطلاعات مکانی ساخته می‌شود؛ کاربر آن را وارد نمی‌کند.</div>
-<div class="idpreview"><span>شناسه خودکار</span><b id="treeIdPreview">پس از انتخاب محل ساخته می‌شود</b></div>
+<div class="notice">هر رکورد ابتدا روی همین گوشی ذخیره می‌شود و سپس در صورت دسترسی به اینترنت با بانک مرکزی همگام می‌شود.</div>
+<div class="idpreview"><span>شناسه درخت</span><b id="treeIdPreview">پس از ثبت، سرور کد نهایی می‌سازد</b></div>
 <div class="grid2">
-<label>نام/کد بازدیدکننده<input id="inspector" required placeholder="مثلاً کارشناس ۱"></label>
-<label>منطقه / ناحیه<select id="zone" required><option value="">انتخاب کنید</option></select></label>
+<label>ناحیه<select id="zone"><option value="">انتخاب کنید</option></select></label>
 <label>محله<select id="neighborhood"><option value="">انتخاب کنید</option></select></label>
 <label>نوع محدوده<select id="areaType"><option>خیابان</option><option>بلوار</option><option>بوستان</option><option>میدان</option><option>رفیوژ میانی</option><option>فضای سبز محله‌ای</option><option>سایر</option></select></label>
-<label>نام خیابان / بلوار / بوستان<select id="street" required><option value="">انتخاب کنید</option></select></label>
-<label>بخش / قطعه / محدوده فرعی<select id="section" required><option value="">انتخاب کنید</option></select></label>
+<label>خیابان / بلوار / بوستان<select id="street"><option value="">انتخاب کنید</option></select></label>
+<label>بخش / قطعه<input id="section" placeholder="مثلاً قطعه ۱۲"></label>
 <label>سمت مسیر<select id="side"><option>نامشخص</option><option>شمال</option><option>جنوب</option><option>شرق</option><option>غرب</option><option>رفت</option><option>برگشت</option><option>میانی</option></select></label>
-<label>نقطه مرجع / نشانی نزدیک<input id="landmark" placeholder="مثلاً روبروی پلاک ۱۲ یا کنار ایستگاه"></label>
+<label>نقطه مرجع / نشانی نزدیک<input id="landmark" placeholder="مثلاً روبروی پلاک ۱۲"></label>
 <label>گونه<input id="species" placeholder="در صورت تردید: نیازمند تأیید"></label>
 <label>مرحله سنی<select id="ageClass"><option>جوان</option><option>نیمه‌بالغ</option><option>بالغ</option><option>کهنسال</option></select></label>
 </div>
 <div class="gpsline"><button type="button" id="gpsBtn">ثبت GPS</button><button type="button" id="mapCurrentBtn" disabled>نمایش روی نقشه</button><span id="gpsText">ثبت نشده</span></div>
 </div>
-
-<div class="card"><h2>۲) ابعاد و وضعیت سلامت</h2>
-<div class="grid3">
-<label>DBH (cm)<input id="dbh" type="number" min="0" step="0.1"></label>
-<label>ارتفاع (m)<input id="height" type="number" min="0" step="0.1"></label>
-<label>قطر تاج (m)<input id="crown" type="number" min="0" step="0.1"></label>
+<div class="card"><h2>۲) ابعاد و سلامت</h2>
+<div class="grid3"><label>DBH (cm)<input id="dbh" type="number" min="0" step="0.1"></label><label>ارتفاع (m)<input id="height" type="number" min="0" step="0.1"></label><label>قطر تاج (m)<input id="crown" type="number" min="0" step="0.1"></label></div>
+<div class="grid3"><label>سلامت تاج<select id="crownScore"><option value="0">خوب</option><option value="1">خفیف</option><option value="2">متوسط</option><option value="3">شدید</option><option value="4">بحرانی</option></select></label><label>سلامت تنه<select id="trunkScore"><option value="0">خوب</option><option value="1">خفیف</option><option value="2">متوسط</option><option value="3">شدید</option><option value="4">بحرانی</option></select></label><label>ریشه/طوقه<select id="rootScore"><option value="0">خوب</option><option value="1">خفیف</option><option value="2">متوسط</option><option value="3">شدید</option><option value="4">بحرانی</option></select></label></div>
 </div>
-<div class="grid3">
-<label>سلامت تاج<select id="crownScore"><option value="0">خوب</option><option value="1">خفیف</option><option value="2">متوسط</option><option value="3">شدید</option><option value="4">بحرانی</option></select></label>
-<label>سلامت تنه<select id="trunkScore"><option value="0">خوب</option><option value="1">خفیف</option><option value="2">متوسط</option><option value="3">شدید</option><option value="4">بحرانی</option></select></label>
-<label>ریشه/طوقه<select id="rootScore"><option value="0">خوب</option><option value="1">خفیف</option><option value="2">متوسط</option><option value="3">شدید</option><option value="4">بحرانی</option><option value="">قابل ارزیابی نبود</option></select></label>
-</div></div>
-
-<div class="card"><h2>۳) آفت، بیماری، آبیاری و بستر</h2>
-<div class="grid2">
-<label>نشانه آفت<select id="pest"><option value="0">ندارد</option><option value="1">خفیف</option><option value="2">متوسط</option><option value="3">شدید</option><option value="4">بحرانی</option></select></label>
-<label>نشانه بیماری<select id="disease"><option value="0">ندارد</option><option value="1">خفیف</option><option value="2">متوسط</option><option value="3">شدید</option><option value="4">بحرانی</option></select></label>
-<label>آبیاری<select id="irrigation"><option value="0">مناسب</option><option value="2">کم</option><option value="2">زیاد</option><option value="3">نامنظم</option><option value="1">نامشخص</option></select></label>
-<label>بستر<select id="site"><option value="0">مناسب</option><option value="2">فشرده</option><option value="2">کم‌حجم</option><option value="3">آب‌مانده</option><option value="2">خشک</option><option value="2">شوری مشکوک</option></select></label>
-<label>تعارض زیرساخت<select id="conflict"><option>ندارد</option><option>جدول</option><option>آسفالت</option><option>کابل/برق</option><option>ساختمان</option><option>دید ترافیکی</option><option>سایر</option></select></label>
-<label>اهمیت محل/تردد<select id="target"><option value="0">کم</option><option value="1">متوسط</option><option value="3">زیاد</option><option value="4">بسیار زیاد</option></select></label>
+<div class="card"><h2>۳) آفت، بیماری و بستر</h2>
+<div class="grid2"><label>نشانه آفت<select id="pest"><option value="0">ندارد</option><option value="1">خفیف</option><option value="2">متوسط</option><option value="3">شدید</option><option value="4">بحرانی</option></select></label><label>نشانه بیماری<select id="disease"><option value="0">ندارد</option><option value="1">خفیف</option><option value="2">متوسط</option><option value="3">شدید</option><option value="4">بحرانی</option></select></label><label>آبیاری<select id="irrigation"><option value="0">مناسب</option><option value="2">کم</option><option value="2">زیاد</option><option value="3">نامنظم</option><option value="1">نامشخص</option></select></label><label>بستر<select id="site"><option value="0">مناسب</option><option value="2">فشرده</option><option value="2">کم‌حجم</option><option value="3">آب‌مانده</option><option value="2">خشک</option><option value="2">شوری مشکوک</option></select></label><label>تعارض زیرساخت<select id="conflict"><option>ندارد</option><option>جدول</option><option>آسفالت</option><option>کابل/برق</option><option>ساختمان</option><option>دید ترافیکی</option><option>سایر</option></select></label><label>اهمیت محل/تردد<select id="target"><option value="0">کم</option><option value="1">متوسط</option><option value="3">زیاد</option><option value="4">بسیار زیاد</option></select></label></div>
+<label>شرح علائم<textarea id="symptoms" rows="3"></textarea></label>
 </div>
-<label>شرح علائم / توضیح<textarea id="symptoms" rows="3"></textarea></label>
-</div>
-
-<div class="card"><h2>۴) ارزیابی خطر</h2>
-<div class="grid2">
-<label>نقص سازه‌ای<select id="structural"><option value="0">ندارد</option><option value="1">خفیف</option><option value="2">متوسط</option><option value="3">شدید</option><option value="4">بحرانی/شکست قریب‌الوقوع</option></select></label>
-<label>احتمال شکست<select id="failure"><option value="0">کم</option><option value="1">متوسط</option><option value="3">زیاد</option><option value="4">فوری</option></select></label>
-</div>
-<div class="resultbox"><div>سطح خطر پیشنهادی: <b id="riskOut">D - کم</b></div><div>اولویت پیشنهادی: <b id="priorityOut">P4</b></div><div>امتیاز اولویت: <b id="scoreOut">0</b> / 100</div></div>
-</div>
-
-<div class="card"><h2>۵) تصمیم مدیریتی و مستندات</h2>
-<div class="grid2">
-<label>گروه مدیریتی<select id="management"><option value="1">گروه ۱ - قابل حفظ و سالم</option><option value="2">گروه ۲ - قابل احیا</option><option value="3">گروه ۳ - نیازمند بررسی تخصصی</option><option value="4">گروه ۴ - کاندید حذف/جایگزینی</option></select></label>
-<label>اقدام اصلی<select id="action"><option>پایش عادی</option><option>هرس اصلاحی</option><option>ایمن‌سازی فوری</option><option>اصلاح آبیاری</option><option>اصلاح خاک/بستر</option><option>بررسی تخصصی</option><option>نمونه‌برداری</option><option>حفظ و احیا</option><option>حذف و جایگزینی</option><option>نیاز به طراحی/بازطراحی</option></select></label>
-</div>
-<label>عکس درخت (حداکثر ۳ عکس در هر رکورد)<input id="photo" type="file" accept="image/*" capture="environment"></label>
-<div id="photoPreview" class="photoPreview"></div>
-<label>یادداشت نهایی<textarea id="notes" rows="3"></textarea></label>
-</div>
-<div class="stickyActions"><button type="submit" class="primary">ذخیره رکورد</button><button type="button" id="resetBtn">فرم جدید</button></div>
+<div class="card"><h2>۴) ارزیابی خطر</h2><div class="grid2"><label>نقص سازه‌ای<select id="structural"><option value="0">ندارد</option><option value="1">خفیف</option><option value="2">متوسط</option><option value="3">شدید</option><option value="4">بحرانی</option></select></label><label>احتمال شکست<select id="failure"><option value="0">کم</option><option value="1">متوسط</option><option value="3">زیاد</option><option value="4">فوری</option></select></label></div><div class="resultbox"><div>سطح خطر: <b id="riskOut">D - کم</b></div><div>اولویت: <b id="priorityOut">P4</b></div><div>امتیاز: <b id="scoreOut">0</b>/100</div></div></div>
+<div class="card"><h2>۵) تصمیم مدیریتی و مستندات</h2><div class="grid2"><label>گروه مدیریتی<select id="management"><option value="1">گروه ۱ - قابل حفظ و سالم</option><option value="2">گروه ۲ - قابل احیا</option><option value="3">گروه ۳ - نیازمند بررسی تخصصی</option><option value="4">گروه ۴ - کاندید حذف/جایگزینی</option></select></label><label>اقدام اصلی<select id="action"><option>پایش عادی</option><option>هرس اصلاحی</option><option>ایمن‌سازی فوری</option><option>اصلاح آبیاری</option><option>اصلاح خاک/بستر</option><option>بررسی تخصصی</option><option>نمونه‌برداری</option><option>حفظ و احیا</option><option>حذف و جایگزینی</option><option>نیاز به طراحی/بازطراحی</option></select></label></div><label>عکس درخت (حداکثر ۳ عکس)<input id="photo" type="file" accept="image/*" capture="environment" multiple></label><div id="photoPreview" class="photoPreview"></div><label>یادداشت<textarea id="notes" rows="3"></textarea></label></div>
+<div class="stickyActions"><button type="submit" class="primary">ذخیره روی گوشی</button><button type="button" id="resetBtn">فرم جدید</button></div>
 </form>
 </section>
 
-<section id="records" class="tab"><div class="card"><div class="toolbar"><input id="search" placeholder="جستجو: کد، خیابان، محله، بخش، گونه..."><button id="exportExcel">خروجی Excel</button><button id="exportCsv">CSV</button></div><div id="recordsList"></div></div></section>
+<section id="records" class="tab"><div class="card"><div class="toolbar"><input id="search" placeholder="جستجو: کد، خیابان، محله، گونه..."><button id="exportExcel">Excel</button><button id="backupJson">پشتیبان JSON</button></div><div class="legend"><span class="status synced">همگام</span><span class="status pending">در انتظار</span><span class="status conflict">تعارض</span></div><div id="recordsList"></div></div></section>
 
-<section id="dashboard" class="tab"><div class="cards" id="kpis"></div><div class="card"><h2>توزیع گروه مدیریتی</h2><div id="groupBars"></div></div><div class="card"><h2>سطح خطر</h2><div id="riskBars"></div></div><div class="card"><h2>خیابان‌ها/محدوده‌های بحرانی</h2><div id="hotspots"></div></div></section>
+<section id="dashboard" class="tab"><div class="cards" id="kpis"></div><div class="card"><h2>توزیع گروه مدیریتی</h2><div id="groupBars"></div></div><div class="card"><h2>سطح خطر</h2><div id="riskBars"></div></div><div class="card"><h2>محدوده‌های پرتکرار</h2><div id="hotspots"></div></div></section>
 
 <section id="settings" class="tab">
-<div class="card"><h2>اطلاعات پایه اولیه شهرضا</h2>
-<p class="muted">این فهرست برای ارائه و آزمون نسخه ۰.۲ از داده‌های عمومی موجود تهیه شده و تا دریافت فهرست رسمی شهرداری «موقت» است. مواردی که شما اضافه می‌کنید حذف نمی‌شوند.</p>
-<div class="grid2">
-<label>افزودن منطقه/ناحیه<input id="newZone" placeholder="مثلاً ناحیه ۳"></label><button id="addZone">افزودن ناحیه</button>
-<label>افزودن محله<input id="newNeighborhood" placeholder="نام رسمی محله"></label><button id="addNeighborhood">افزودن محله</button>
-<label>افزودن خیابان/بلوار/بوستان<input id="newStreet" placeholder="نام رسمی"></label><button id="addStreet">افزودن محل</button>
-<label>افزودن بخش/قطعه<input id="newSection" placeholder="مثلاً قطعه ۱۲"></label><button id="addSection">افزودن بخش</button>
-</div>
-<div class="listbox"><b>ناحیه‌ها:</b><div id="zonesList"></div></div>
-<div class="listbox"><b>محله‌ها:</b><div id="neighborhoodsList"></div></div>
-<div class="listbox"><b>خیابان/بلوار/بوستان‌ها:</b><div id="streetsList"></div></div>
-<div class="listbox"><b>بخش‌ها:</b><div id="sectionsList"></div></div>
-</div>
-<div class="card"><h2>ورود گروهی فهرست‌ها</h2><p class="muted">هر مورد را در یک خط بنویسید. برای جلسه بعد، فهرست رسمی شهرداری را می‌توان یک‌جا وارد کرد.</p>
-<label>ناحیه‌ها<textarea id="bulkZones" rows="3"></textarea></label>
-<label>محله‌ها<textarea id="bulkNeighborhoods" rows="5"></textarea></label>
-<label>خیابان‌ها / بلوارها / بوستان‌ها<textarea id="bulkStreets" rows="7"></textarea></label>
-<label>بخش‌ها / قطعات<textarea id="bulkSections" rows="5"></textarea></label>
-<button id="importLists" class="primary">ثبت فهرست‌ها</button></div>
-<div class="card"><h2>پشتیبان و انتقال داده</h2><p class="muted">نسخه ۰.۲ داده‌های رکورد را در پایگاه محلی مرورگر/اپ نگه می‌دارد و برای انتقال بین دستگاه‌ها فایل پشتیبان دارد. اتصال چندکاربره به سرور مرکزی مرحله بعد است.</p><div class="toolbar"><button id="backupJson">پشتیبان JSON</button><label class="buttonlike">بازیابی JSON<input id="restoreJson" type="file" accept=".json" hidden></label><button id="clearAll" class="danger">حذف همه رکوردها</button></div></div>
+<div class="card"><h2>اطلاعات پایه</h2><p class="muted">اطلاعات پایه از بانک مرکزی خوانده می‌شود و یک نسخه محلی نیز روی گوشی نگه داشته می‌شود. «شهرضا» در فهرست پیش‌فرض محله‌ها قرار دارد.</p><div class="listbox"><b>ناحیه‌ها:</b><div id="zonesList"></div></div><div class="listbox"><b>محله‌ها:</b><div id="neighborhoodsList"></div></div><div class="listbox"><b>خیابان/بلوار/بوستان‌ها:</b><div id="streetsList"></div></div></div>
+<div class="card adminOnly" hidden><h2>مدیریت اطلاعات پایه</h2><div class="grid2"><label>نوع<select id="newLocationType"><option value="zone">ناحیه</option><option value="neighborhood">محله</option><option value="street">خیابان</option><option value="boulevard">بلوار</option><option value="park">بوستان</option></select></label><label>نام<input id="newLocationName"></label><label>کد کوتاه<input id="newLocationCode" placeholder="مثلاً ST012"></label><button id="addLocationBtn" class="primary">افزودن به بانک مرکزی</button></div></div>
+<div class="card"><h2>پشتیبان و بازیابی</h2><div class="toolbar"><button id="backupJson2">پشتیبان JSON</button><label class="buttonlike">بازیابی JSON<input id="restoreJson" type="file" accept=".json" hidden></label></div><p class="muted">پشتیبان JSON فقط از اطلاعات محلی این گوشی تهیه می‌شود و مستقل از سرور قابل نگهداری است.</p></div>
 </section>
-</main>
 
-<dialog id="detailDialog">
-<div class="dialogHead"><b>پرونده درخت</b><button id="closeDetail">×</button></div>
-<div id="detailBody"></div>
-</dialog>
+<section id="team" class="tab"><div class="card"><h2>اعضای تیم</h2><p class="muted">یک مدیر و هر تعداد کارشناس می‌توانند به یک بانک مرکزی وصل شوند. مدیر می‌تواند نقش یا وضعیت اعضا را تغییر دهد.</p><div id="teamList"></div></div></section>
+</main>
+<dialog id="detailDialog"><div class="dialogHead"><b>پرونده درخت</b><button id="closeDetail">×</button></div><div id="detailBody"></div></dialog>
 <div id="toast"></div>
-<script src="app.js"></script>
-</body></html>
+</div>
+<script src="app.bundle.js"></script>
+</body>
+</html>

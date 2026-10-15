@@ -1,85 +1,236 @@
-const APP_VERSION="0.2.0";
-const OLD_DB="shahrezaTreeSurveyV2", CFG_KEY="shahrezaTreeSurveyListsV2";
-const DEFAULTS={
-  zones:["ناحیه ۱","ناحیه ۲"],
-  neighborhoods:["خمینی‌آباد","شهرک قشقایی","شهرک طالقانی","پانصد دستگاه","اسلام‌آباد","حسین‌آباد","باغ‌ملی","سروستان","اردیبهشت","شاهرضا","جرم‌افشار","اسفه‌سالار"],
-  streets:[
-    "خیابان شهید بهشتی","خیابان حکیم صهبا","خیابان پاسداران","خیابان شهید طباطبایی","بلوار امام خمینی","بلوار شهید مطهری","خیابان ۴۵ متری","بلوار شهید نواب صفوی","خیابان بلال","خیابان جانبازان","خیابان حکیم زاهد","خیابان حافظ شرقی","خیابان حافظ غربی","خیابان آیت‌الله غفاری","خیابان طالقانی","بلوار شهید قانع","خیابان آزادگان","خیابان ارشاد","خیابان ۴۰ متری","خیابان ولیعصر شرقی","خیابان ولیعصر غربی","خیابان حکیم الهی","خیابان استقلال","خیابان پیروزی","خیابان حکیم نصرالله","خیابان مدرس","خیابان کشاورز","خیابان ۲۸ متری","خیابان امیرکبیر","خیابان صاحب‌الزمان","خیابان انقلاب اسلامی","خیابان ابوذر","خیابان شهید یزدانی","خیابان شورا","خیابان شهید دستغیب","خیابان سعدی شمالی","خیابان شهید فهمیده","خیابان کمیل","خیابان سلمان","خیابان بهار","خیابان ارم","خیابان شهید مهاجرانی","پارک ملت","پارک خانه شهر","پارک پردیس","پارک شهید بهشتی","پارک نهالستان","باغ بانوان","پارک مدرس"
-  ],
-  sections:Array.from({length:20},(_,i)=>`قطعه ${i+1}`)
-};
-const $=id=>document.getElementById(id);
-const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
-const uniq=a=>[...new Set(a.filter(Boolean).map(x=>String(x).trim()).filter(Boolean))];
-let cfg=loadCfg(), records=[], editingId=null, lat=null, lon=null, photos=[];
+import { createClient } from '@supabase/supabase-js';
+import { Geolocation } from '@capacitor/geolocation';
+import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
+import * as XLSX from 'xlsx';
+
+const SUPABASE_URL = 'https://qmnkhmlyuwvixvigbhgz.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_l5XvqXMs5pySlkLHiM7NUQ_iGy08vgZ';
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false }
+});
+
+const FALLBACK_LOCATIONS = [
+  {id:'local-nb-city',type:'neighborhood',code:'SHR-CITY',name:'شهرضا'},
+  {id:'local-nb-khm',type:'neighborhood',code:'KHM',name:'خمینی‌آباد'},
+  {id:'local-nb-gsh',type:'neighborhood',code:'GSH',name:'شهرک قشقایی'},
+  {id:'local-nb-tal',type:'neighborhood',code:'TAL',name:'شهرک طالقانی'},
+  {id:'local-nb-500',type:'neighborhood',code:'500',name:'پانصد دستگاه'},
+  {id:'local-nb-isl',type:'neighborhood',code:'ISL',name:'اسلام‌آباد'},
+  {id:'local-nb-hos',type:'neighborhood',code:'HOS',name:'حسین‌آباد'},
+  {id:'local-nb-bml',type:'neighborhood',code:'BML',name:'باغ‌ملی'},
+  {id:'local-nb-srv',type:'neighborhood',code:'SRV',name:'سروستان'},
+  {id:'local-nb-ord',type:'neighborhood',code:'ORD',name:'اردیبهشت'},
+  {id:'local-st-001',type:'street',code:'ST001',name:'شهید بهشتی'},
+  {id:'local-st-002',type:'street',code:'ST002',name:'حکیم صهبا'},
+  {id:'local-st-003',type:'street',code:'ST003',name:'پاسداران'},
+  {id:'local-st-004',type:'street',code:'ST004',name:'طباطبایی'},
+  {id:'local-bl-001',type:'boulevard',code:'BL001',name:'بلوار امام خمینی'},
+  {id:'local-bl-002',type:'boulevard',code:'BL002',name:'بلوار شهید مطهری'},
+  {id:'local-st-005',type:'street',code:'ST005',name:'نواب صفوی'},
+  {id:'local-st-006',type:'street',code:'ST006',name:'بلال'},
+  {id:'local-st-007',type:'street',code:'ST007',name:'جانبازان'},
+  {id:'local-st-008',type:'street',code:'ST008',name:'حافظ شرقی'},
+  {id:'local-st-009',type:'street',code:'ST009',name:'حافظ غربی'},
+  {id:'local-st-010',type:'street',code:'ST010',name:'آیت‌الله غفاری'},
+  {id:'local-st-011',type:'street',code:'ST011',name:'طالقانی'},
+  {id:'local-st-012',type:'street',code:'ST012',name:'آزادگان'},
+  {id:'local-st-013',type:'street',code:'ST013',name:'ولیعصر شرقی'},
+  {id:'local-st-014',type:'street',code:'ST014',name:'ولیعصر غربی'},
+  {id:'local-st-015',type:'street',code:'ST015',name:'استقلال'},
+  {id:'local-st-016',type:'street',code:'ST016',name:'پیروزی'},
+  {id:'local-st-017',type:'street',code:'ST017',name:'مدرس'},
+  {id:'local-st-018',type:'street',code:'ST018',name:'کشاورز'},
+  {id:'local-st-019',type:'street',code:'ST019',name:'امیرکبیر'},
+  {id:'local-st-020',type:'street',code:'ST020',name:'انقلاب اسلامی'},
+  {id:'local-pk-001',type:'park',code:'PK001',name:'پارک ملت'},
+  {id:'local-pk-002',type:'park',code:'PK002',name:'پارک خانه شهر'},
+  {id:'local-pk-003',type:'park',code:'PK003',name:'پارک شهید بهشتی'},
+  {id:'local-pk-004',type:'park',code:'PK004',name:'پارک معلم'},
+  {id:'local-pk-005',type:'park',code:'PK005',name:'باغ بانوان'},
+  {id:'local-pk-006',type:'park',code:'PK006',name:'پارک شهید ولی‌الله وفایی'},
+  {id:'local-pk-007',type:'park',code:'PK007',name:'پارک اسلام‌شهر'}
+];
+
+const $ = id => document.getElementById(id);
 let db;
-function loadCfg(){let saved={};try{saved=JSON.parse(localStorage.getItem(CFG_KEY)||"{}")}catch{};let old={};try{old=JSON.parse(localStorage.getItem("shahrezaTreeSurveyListsV1")||"{}")}catch{};return {zones:uniq([...(DEFAULTS.zones),...(saved.zones||[]),...(old.zones||[])]),neighborhoods:uniq([...(DEFAULTS.neighborhoods),...(saved.neighborhoods||[])]),streets:uniq([...(DEFAULTS.streets),...(saved.streets||[]),...(old.streets||[])]),sections:uniq([...(DEFAULTS.sections),...(saved.sections||[]),...(old.sections||[])])}}
-function persistCfg(){localStorage.setItem(CFG_KEY,JSON.stringify(cfg));refreshSelects()}
-function toast(s){let t=$("toast");t.textContent=s;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2200)}
+let session = null;
+let profile = null;
+let offlineMode = false;
+let currentGps = null;
+let selectedPhotoFiles = [];
+let editingId = null;
+let locationsCache = [];
+let syncBusy = false;
 
-function openDB(){return new Promise((resolve,reject)=>{let req=indexedDB.open("ShahrezaTreeDB",2);req.onupgradeneeded=e=>{let d=e.target.result;if(!d.objectStoreNames.contains("records"))d.createObjectStore("records",{keyPath:"uid"})};req.onsuccess=e=>{db=e.target.result;resolve(db)};req.onerror=()=>reject(req.error)})}
-function txStore(mode="readonly"){return db.transaction("records",mode).objectStore("records")}
-function dbAll(){return new Promise((resolve,reject)=>{let r=txStore().getAll();r.onsuccess=()=>resolve(r.result||[]);r.onerror=()=>reject(r.error)})}
-function dbPut(obj){return new Promise((resolve,reject)=>{let r=txStore("readwrite").put(obj);r.onsuccess=()=>resolve();r.onerror=()=>reject(r.error)})}
-function dbDelete(uid){return new Promise((resolve,reject)=>{let r=txStore("readwrite").delete(uid);r.onsuccess=()=>resolve();r.onerror=()=>reject(r.error)})}
-function dbClear(){return new Promise((resolve,reject)=>{let r=txStore("readwrite").clear();r.onsuccess=()=>resolve();r.onerror=()=>reject(r.error)})}
-async function reload(){records=await dbAll();renderDashboard();renderRecords()}
-async function migrateOld(){if(records.length)return;let old=[];try{old=JSON.parse(localStorage.getItem(OLD_DB)||"[]")}catch{};for(const r of old){if(r.photo&&!r.photos)r.photos=[r.photo];delete r.photo;await dbPut(r)}if(old.length){localStorage.removeItem(OLD_DB);records=await dbAll();toast(`${old.length} رکورد قبلی به نسخه جدید منتقل شد`)}}
+function toast(msg){const el=$('toast');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2600)}
+function val(id){return $(id)?.value ?? ''}
+function num(id){const v=parseFloat(val(id));return Number.isFinite(v)?v:null}
+function safe(s=''){return String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
+function isOnline(){return navigator.onLine && !offlineMode}
+function nowIso(){return new Date().toISOString()}
+function uid(){return crypto.randomUUID()}
 
-function fillSelect(id,a){let s=$(id),old=s.value;s.innerHTML='<option value="">انتخاب کنید</option>'+a.map(x=>`<option>${esc(x)}</option>`).join("");if(a.includes(old))s.value=old}
-function refreshSelects(){fillSelect("zone",cfg.zones);fillSelect("neighborhood",cfg.neighborhoods);fillSelect("street",cfg.streets);fillSelect("section",cfg.sections);updateIdPreview()}
-function renderLists(){["zones","neighborhoods","streets","sections"].forEach(k=>$(k+"List").innerHTML=cfg[k].length?cfg[k].map(x=>`<span class="chip">${esc(x)}</span>`).join(""):"<span class='muted'>موردی ثبت نشده.</span>")}
-function addCfg(k,id){let v=$(id).value.trim();if(!v)return;if(!cfg[k].includes(v))cfg[k].push(v);$(id).value="";persistCfg();renderLists();toast("اضافه شد")}
-$("addZone").onclick=()=>addCfg("zones","newZone");$("addNeighborhood").onclick=()=>addCfg("neighborhoods","newNeighborhood");$("addStreet").onclick=()=>addCfg("streets","newStreet");$("addSection").onclick=()=>addCfg("sections","newSection");
-$("importLists").onclick=()=>{[["zones","bulkZones"],["neighborhoods","bulkNeighborhoods"],["streets","bulkStreets"],["sections","bulkSections"]].forEach(([k,id])=>{let a=$(id).value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);cfg[k]=uniq([...cfg[k],...a])});persistCfg();renderLists();toast("فهرست‌ها ثبت شد")};
+function openDB(){return new Promise((resolve,reject)=>{const r=indexedDB.open('ShahrezaTreeSurveyDB',3);r.onupgradeneeded=e=>{const d=e.target.result;if(!d.objectStoreNames.contains('trees'))d.createObjectStore('trees',{keyPath:'id'});if(!d.objectStoreNames.contains('photos'))d.createObjectStore('photos',{keyPath:'id'});if(!d.objectStoreNames.contains('meta'))d.createObjectStore('meta',{keyPath:'key'});if(!d.objectStoreNames.contains('locations'))d.createObjectStore('locations',{keyPath:'id'});};r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);})}
+function tx(store,mode='readonly'){return db.transaction(store,mode).objectStore(store)}
+function put(store,obj){return new Promise((res,rej)=>{const r=tx(store,'readwrite').put(obj);r.onsuccess=()=>res(obj);r.onerror=()=>rej(r.error)})}
+function get(store,key){return new Promise((res,rej)=>{const r=tx(store).get(key);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
+function getAll(store){return new Promise((res,rej)=>{const r=tx(store).getAll();r.onsuccess=()=>res(r.result||[]);r.onerror=()=>rej(r.error)})}
+function del(store,key){return new Promise((res,rej)=>{const r=tx(store,'readwrite').delete(key);r.onsuccess=()=>res();r.onerror=()=>rej(r.error)})}
+function clearStore(store){return new Promise((res,rej)=>{const r=tx(store,'readwrite').clear();r.onsuccess=()=>res();r.onerror=()=>rej(r.error)})}
+async function metaGet(key,def=null){const x=await get('meta',key);return x?.value ?? def}
+async function metaSet(key,value){return put('meta',{key,value})}
 
-function hashCode(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return (h>>>0).toString(36).toUpperCase().slice(-3).padStart(3,"0")}
-function zoneCode(s){let m=String(s||"").match(/[۰-۹0-9]+/);if(m){let x=m[0].replace(/[۰-۹]/g,d=>"۰۱۲۳۴۵۶۷۸۹".indexOf(d));return "Z"+String(parseInt(x)||0).padStart(2,"0")}return "Z"+hashCode(s)}
-function sectionCode(s){let m=String(s||"").match(/[۰-۹0-9]+/);if(m){let x=m[0].replace(/[۰-۹]/g,d=>"۰۱۲۳۴۵۶۷۸۹".indexOf(d));return "S"+String(parseInt(x)||0).padStart(2,"0")}return "S"+hashCode(s)}
-const sideCodes={"شمال":"N","جنوب":"S","شرق":"E","غرب":"W","رفت":"G","برگشت":"B","میانی":"M","نامشخص":"U"};
-function baseLocationCode(){let z=$("zone").value,n=$("neighborhood").value,st=$("street").value,se=$("section").value,si=$("side").value;if(!z||!st||!se)return null;return `SHR-${zoneCode(z)}-N${hashCode(n||"-")}-L${hashCode(st)}-${sectionCode(se)}-${sideCodes[si]||"U"}`}
-function nextSequence(base){let same=records.filter(r=>String(r.treeId||"").startsWith(base+"-"));let nums=same.map(r=>parseInt(String(r.treeId).split("-").pop())||0);return (Math.max(0,...nums)+1)}
-function makeTreeId(){if(editingId){let r=records.find(x=>x.uid===editingId);if(r?.treeId)return r.treeId}let base=baseLocationCode();return base?`${base}-${String(nextSequence(base)).padStart(4,"0")}`:""}
-function updateIdPreview(){let id=makeTreeId();$("treeIdPreview").textContent=id||"پس از انتخاب ناحیه، محل و قطعه ساخته می‌شود"}
-["zone","neighborhood","street","section","side"].forEach(id=>$(id).addEventListener("change",updateIdPreview));
+async function init(){
+  db=await openDB();
+  await seedFallbackLocations();
+  bindUI();
+  updateNetStatus();
+  const cachedProfile=await metaGet('cachedProfile');
+  const {data:{session:s}}=await supabase.auth.getSession();
+  session=s;
+  if(session){await loadProfile();showApp();await refreshLocations();await syncAll();}
+  else if(cachedProfile){$('offlineEntry').hidden=false;}
+  window.addEventListener('online',async()=>{offlineMode=false;updateNetStatus();await tryRestoreSessionAndSync();});
+  window.addEventListener('offline',updateNetStatus);
+  if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});
+}
 
-function n(id){let v=parseFloat($(id).value);return isNaN(v)?0:v}
-function calc(){let h=Math.max(n("crownScore"),n("trunkScore"),n("rootScore")),b=Math.max(n("pest"),n("disease")),e=Math.max(n("irrigation"),n("site")),r=Math.max(n("structural"),n("failure")),t=n("target"),score=Math.round(h/4*30+r/4*35+b/4*15+e/4*10+t/4*10),priority=score>=75?"P1":score>=50?"P2":score>=25?"P3":"P4",riskTxt=r>=4?"A - فوری":r>=3?"B - زیاد":r>=2?"C - متوسط":"D - کم";$("scoreOut").textContent=score;$("priorityOut").textContent=priority;$("riskOut").textContent=riskTxt;return{score,priority,riskTxt}}
-["crownScore","trunkScore","rootScore","pest","disease","irrigation","site","structural","failure","target"].forEach(id=>$(id).addEventListener("change",calc));
+async function seedFallbackLocations(){const existing=await getAll('locations');if(existing.length===0){for(const x of FALLBACK_LOCATIONS)await put('locations',x)}}
 
-function mapUrl(a,b){return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(a+","+b)}`}
-function openMap(a,b){if(a==null||b==null)return toast("GPS ثبت نشده است");window.open(mapUrl(a,b),"_blank")}
-$("mapCurrentBtn").onclick=()=>openMap(lat,lon);
-$("gpsBtn").onclick=async()=>{try{$("gpsText").textContent="در حال دریافت...";let p;let g=window.Capacitor?.Plugins?.Geolocation;if(g){try{await g.requestPermissions()}catch{}p=await g.getCurrentPosition({enableHighAccuracy:true,timeout:15000})}else{p=await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(res,rej,{enableHighAccuracy:true,timeout:15000}))}lat=p.coords.latitude;lon=p.coords.longitude;$("gpsText").textContent=`${lat.toFixed(6)}, ${lon.toFixed(6)}`;$("mapCurrentBtn").disabled=false}catch(e){$("gpsText").textContent="خطا در GPS";toast("مجوز موقعیت مکانی را فعال کنید")}};
+function bindUI(){
+  $('loginTab').onclick=()=>switchAuth('login');$('signupTab').onclick=()=>switchAuth('signup');
+  $('loginBtn').onclick=login;$('signupBtn').onclick=signup;$('continueOfflineBtn').onclick=continueOffline;$('logoutBtn').onclick=logout;
+  document.querySelectorAll('.tabs button[data-tab]').forEach(b=>b.onclick=()=>showTab(b.dataset.tab,b));
+  $('syncNowBtn').onclick=syncAll;$('gpsBtn').onclick=captureGps;$('mapCurrentBtn').onclick=()=>currentGps&&openMap(currentGps.latitude,currentGps.longitude);
+  $('treeForm').addEventListener('submit',saveTree);$('resetBtn').onclick=resetForm;
+  $('photo').addEventListener('change',previewPhotos);$('search').addEventListener('input',renderRecords);
+  $('exportExcel').onclick=exportExcel;$('backupJson').onclick=backupJson;$('backupJson2').onclick=backupJson;$('restoreJson').onchange=restoreJson;
+  $('closeDetail').onclick=()=>$('detailDialog').close();$('addLocationBtn').onclick=addLocation;
+  ['crownScore','trunkScore','rootScore','pest','disease','irrigation','site','structural','failure','target'].forEach(id=>$(id).onchange=calcRisk);
+}
+function switchAuth(mode){const login=mode==='login';$('loginPane').hidden=!login;$('signupPane').hidden=login;$('loginTab').classList.toggle('active',login);$('signupTab').classList.toggle('active',!login);$('authMsg').textContent=''}
+function showTab(id,btn){document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.id===id));document.querySelectorAll('.tabs button[data-tab]').forEach(x=>x.classList.toggle('active',x===btn));if(id==='records')renderRecords();if(id==='dashboard')renderDashboard();if(id==='settings')renderSettings();if(id==='team')renderTeam();}
 
-function renderPhotoPreview(){$("photoPreview").innerHTML=photos.length?photos.map((p,i)=>`<div class="thumb"><img src="${p}" alt="عکس درخت"><button type="button" onclick="removePhoto(${i})">×</button></div>`).join(""):"<span class='muted'>عکسی ثبت نشده.</span>"}
-window.removePhoto=i=>{photos.splice(i,1);renderPhotoPreview()};
-$("photo").onchange=()=>{let f=$("photo").files[0];if(!f)return;if(photos.length>=3)return toast("حداکثر ۳ عکس برای هر رکورد");let r=new FileReader();r.onload=()=>{photos.push(r.result);renderPhotoPreview();$("photo").value=""};r.readAsDataURL(f)};
+async function login(){
+  $('authMsg').textContent='در حال ورود...';
+  const {data,error}=await supabase.auth.signInWithPassword({email:val('loginEmail').trim(),password:val('loginPassword')});
+  if(error){$('authMsg').textContent='ورود انجام نشد: '+error.message;return}
+  session=data.session;offlineMode=false;await loadProfile();await metaSet('cachedProfile',profile);showApp();await refreshLocations();await syncAll();
+}
+async function signup(){
+  const full_name=val('signupName').trim(),email=val('signupEmail').trim(),password=val('signupPassword');
+  if(!full_name||!email||password.length<6){$('authMsg').textContent='نام، ایمیل و رمز حداقل ۶ کاراکتری را وارد کنید.';return}
+  $('authMsg').textContent='در حال ساخت حساب...';
+  const {data,error}=await supabase.auth.signUp({email,password,options:{data:{full_name}}});
+  if(error){$('authMsg').textContent=error.message;return}
+  if(!data.session){$('authMsg').textContent='حساب ساخته شد. اگر تأیید ایمیل فعال باشد، ایمیل را تأیید و سپس وارد شوید.';switchAuth('login');return}
+  session=data.session;
+  await new Promise(r=>setTimeout(r,600));
+  await supabase.rpc('claim_initial_admin');
+  await loadProfile();await metaSet('cachedProfile',profile);showApp();await refreshLocations();await syncAll();
+}
+async function continueOffline(){profile=await metaGet('cachedProfile');offlineMode=true;showApp();await loadLocalLocations();toast('حالت آفلاین فعال شد')}
+async function logout(){if(isOnline())await supabase.auth.signOut();session=null;profile=null;offlineMode=false;$('appShell').hidden=true;$('authGate').hidden=false;$('offlineEntry').hidden=!(await metaGet('cachedProfile'));}
+async function tryRestoreSessionAndSync(){const {data:{session:s}}=await supabase.auth.getSession();if(s){session=s;await loadProfile();await syncAll();}}
+async function loadProfile(){
+  if(!session?.user)return;
+  const {data,error}=await supabase.from('profiles').select('*').eq('id',session.user.id).single();
+  if(!error&&data){profile=data;await metaSet('cachedProfile',profile)}else profile=await metaGet('cachedProfile',{id:session.user.id,full_name:session.user.email,role:'inspector',is_active:true});
+}
+function showApp(){
+  $('authGate').hidden=true;$('appShell').hidden=false;
+  $('userName').textContent=profile?.full_name||session?.user?.email||'کاربر';$('userRole').textContent=profile?.role==='admin'?'مدیر':'کارشناس';
+  const admin=profile?.role==='admin';$('teamTabBtn').hidden=!admin;document.querySelectorAll('.adminOnly').forEach(x=>x.hidden=!admin);updateNetStatus();loadLocalLocations();renderRecords();
+}
+function updateNetStatus(){$('netStatus').textContent=isOnline()?'آنلاین':'آفلاین';$('netStatus').className='pill '+(isOnline()?'synced':'pending')}
 
-function resetForm(){$("treeForm").reset();editingId=null;lat=lon=null;photos=[];$("gpsText").textContent="ثبت نشده";$("mapCurrentBtn").disabled=true;refreshSelects();renderPhotoPreview();calc();updateIdPreview()}$("resetBtn").onclick=resetForm;
-$("treeForm").onsubmit=async e=>{e.preventDefault();let treeId=makeTreeId();if(!treeId)return toast("ناحیه، محل و قطعه را کامل کنید");let c=calc(),old=editingId?records.find(x=>x.uid===editingId):null,rec={uid:editingId||crypto.randomUUID(),treeId,createdAt:old?.createdAt||new Date().toISOString(),visitDate:new Date().toISOString(),inspector:$("inspector").value.trim(),zone:$("zone").value,neighborhood:$("neighborhood").value,areaType:$("areaType").value,street:$("street").value,section:$("section").value,side:$("side").value,landmark:$("landmark").value.trim(),species:$("species").value.trim(),ageClass:$("ageClass").value,lat,lon,dbh:$("dbh").value,height:$("height").value,crown:$("crown").value,crownScore:$("crownScore").value,trunkScore:$("trunkScore").value,rootScore:$("rootScore").value,pest:$("pest").value,disease:$("disease").value,irrigation:$("irrigation").value,site:$("site").value,conflict:$("conflict").value,target:$("target").value,symptoms:$("symptoms").value.trim(),structural:$("structural").value,failure:$("failure").value,risk:c.riskTxt,score:c.score,priority:c.priority,management:$("management").value,action:$("action").value,notes:$("notes").value.trim(),photos,appVersion:APP_VERSION};await dbPut(rec);await reload();toast(`رکورد ذخیره شد: ${treeId}`);resetForm()};
+async function refreshLocations(){
+  if(isOnline()&&session){const {data,error}=await supabase.from('locations').select('*').eq('is_active',true).order('name');if(!error&&data?.length){await clearStore('locations');for(const x of data)await put('locations',x)}}
+  await loadLocalLocations();
+}
+async function loadLocalLocations(){locationsCache=await getAll('locations');fillLocationSelects();}
+function fillLocationSelects(){
+  fillSelect('zone',locationsCache.filter(x=>x.type==='zone'));fillSelect('neighborhood',locationsCache.filter(x=>x.type==='neighborhood'));fillSelect('street',locationsCache.filter(x=>['street','boulevard','park'].includes(x.type)));
+}
+function fillSelect(id,items){const el=$(id),old=el.value;el.innerHTML='<option value="">انتخاب کنید</option>'+items.sort((a,b)=>a.name.localeCompare(b.name,'fa')).map(x=>`<option value="${safe(x.id)}">${safe(x.name)}</option>`).join('');if([...el.options].some(o=>o.value===old))el.value=old;}
+function locName(id){return locationsCache.find(x=>String(x.id)===String(id))?.name||''}
 
-function labelScore(v){return["خوب","خفیف","متوسط","شدید","بحرانی"][parseInt(v)]||"NA"}
-function renderRecords(){if(!$("recordsList"))return;let q=$("search").value.trim().toLowerCase(),a=records.filter(r=>!q||[r.treeId,r.street,r.section,r.zone,r.neighborhood,r.species,r.inspector].join(" ").toLowerCase().includes(q)).sort((a,b)=>String(b.visitDate).localeCompare(String(a.visitDate)));$("recordsList").innerHTML=a.length?a.map(r=>`<div class="record"><div class="recordhead"><b>${esc(r.treeId)}</b><span class="badge">${esc(r.priority)} | گروه ${esc(r.management)}</span></div><div>${esc(r.street)} ${r.section?("– "+esc(r.section)):""} — ${esc(r.species||"گونه ثبت نشده")}</div><div class="small">${esc(r.zone)}${r.neighborhood?" / "+esc(r.neighborhood):""} | خطر: ${esc(r.risk)} | اقدام: ${esc(r.action)} | عکس: ${(r.photos||[]).length}</div><div class="recordActions"><button onclick="showDetail('${r.uid}')">جزئیات</button>${r.lat!=null?`<button onclick="openMapRec('${r.uid}')">نقشه</button>`:""}<button onclick="editRec('${r.uid}')">ویرایش</button><button onclick="deleteRec('${r.uid}')">حذف</button></div></div>`).join(""):"<p class='muted'>رکوردی ثبت نشده است.</p>"}
-$("search").oninput=renderRecords;
-window.openMapRec=id=>{let r=records.find(x=>x.uid===id);if(r)openMap(r.lat,r.lon)};
-window.deleteRec=async id=>{if(confirm("این رکورد حذف شود؟")){await dbDelete(id);await reload();toast("رکورد حذف شد")}};
-window.editRec=id=>{let r=records.find(x=>x.uid===id);if(!r)return;editingId=id;["inspector","zone","neighborhood","areaType","street","section","side","landmark","species","ageClass","dbh","height","crown","crownScore","trunkScore","rootScore","pest","disease","irrigation","site","conflict","target","symptoms","structural","failure","management","action","notes"].forEach(k=>{if($(k))$(k).value=r[k]??""});lat=r.lat;lon=r.lon;photos=[...(r.photos||[])];$("gpsText").textContent=lat!=null?`${Number(lat).toFixed(6)}, ${Number(lon).toFixed(6)}`:"ثبت نشده";$("mapCurrentBtn").disabled=lat==null;renderPhotoPreview();calc();updateIdPreview();document.querySelector('[data-tab="form"]').click();window.scrollTo(0,0)};
-window.showDetail=id=>{let r=records.find(x=>x.uid===id);if(!r)return;let gps=r.lat!=null?`${Number(r.lat).toFixed(6)}, ${Number(r.lon).toFixed(6)}`:"ثبت نشده";$("detailBody").innerHTML=`<div class="detailId">${esc(r.treeId)}</div><div class="detailGrid"><div><span>محل</span><b>${esc([r.zone,r.neighborhood,r.street,r.section,r.side].filter(Boolean).join(" / "))}</b></div><div><span>گونه</span><b>${esc(r.species||"ثبت نشده")}</b></div><div><span>GPS</span><b>${esc(gps)}</b></div><div><span>اولویت</span><b>${esc(r.priority)} — ${esc(r.risk)}</b></div><div><span>گروه مدیریتی</span><b>گروه ${esc(r.management)}</b></div><div><span>اقدام</span><b>${esc(r.action)}</b></div><div><span>نقطه مرجع</span><b>${esc(r.landmark||"—")}</b></div><div><span>آخرین بازدید</span><b>${new Date(r.visitDate).toLocaleString("fa-IR")}</b></div></div>${r.lat!=null?`<button class="primary wide" onclick="openMapRec('${r.uid}')">نمایش نقطه دقیق روی نقشه</button>`:""}<div class="detailPhotos">${(r.photos||[]).map(p=>`<img src="${p}" alt="عکس درخت">`).join("")||"<span class='muted'>عکسی ثبت نشده.</span>"}</div><div class="notesBox"><b>علائم و توضیحات:</b><br>${esc(r.symptoms||"—")}<br><br><b>یادداشت:</b><br>${esc(r.notes||"—")}</div>`;$("detailDialog").showModal()};
-$("closeDetail").onclick=()=>$("detailDialog").close();
+function calcRisk(){
+  const health=Math.max(num('crownScore')||0,num('trunkScore')||0,num('rootScore')||0);const structural=Math.max(num('structural')||0,num('failure')||0);const pd=Math.max(num('pest')||0,num('disease')||0);const site=Math.max(num('irrigation')||0,num('site')||0);const target=num('target')||0;
+  const score=Math.round((health/4)*30+(structural/4)*35+(pd/4)*15+(site/4)*10+(target/4)*10);let p='P4';if(score>=75)p='P1';else if(score>=50)p='P2';else if(score>=25)p='P3';const raw=Math.max(structural,health,pd);let risk='D - کم';if(raw>=4)risk='A - فوری';else if(raw>=3)risk='B - زیاد';else if(raw>=2)risk='C - متوسط';$('scoreOut').textContent=score;$('priorityOut').textContent=p;$('riskOut').textContent=risk;return{score,priority:p,risk_level:risk}}
+async function captureGps(){
+  try{await Geolocation.requestPermissions();const p=await Geolocation.getCurrentPosition({enableHighAccuracy:true,timeout:15000});currentGps={latitude:p.coords.latitude,longitude:p.coords.longitude,accuracy:p.coords.accuracy};$('gpsText').textContent=`${currentGps.latitude.toFixed(6)}, ${currentGps.longitude.toFixed(6)} ±${Math.round(currentGps.accuracy)}m`;$('mapCurrentBtn').disabled=false;}
+  catch(e){toast('GPS دریافت نشد: '+(e.message||e))}
+}
+function openMap(lat,lng){window.open(`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`,'_blank')}
+function previewPhotos(){selectedPhotoFiles=[...$('photo').files].slice(0,3);$('photoPreview').innerHTML='';selectedPhotoFiles.forEach(f=>{const u=URL.createObjectURL(f);const img=document.createElement('img');img.src=u;$('photoPreview').appendChild(img)})}
 
-function bars(id,a,total){$(id).innerHTML=a.map(([k,v])=>{let p=total?Math.round(v/total*100):0;return`<div class="barrow"><span>${k}</span><div class="bar"><i style="width:${p}%"></i></div><b>${v}</b></div>`}).join("")}
-function renderDashboard(){let total=records.length,p1=records.filter(r=>r.priority==="P1").length,g4=records.filter(r=>r.management==="4").length,flagged=records.filter(r=>+r.pest>0||+r.disease>0).length;$("kpis").innerHTML=[["کل رکورد",total],["P1 فوری",p1],["گروه ۴",g4],["دارای علامت آفت/بیماری",flagged]].map(x=>`<div class="kpi"><span>${x[0]}</span><b>${x[1]}</b></div>`).join("");bars("groupBars",["1","2","3","4"].map(k=>["گروه "+k,records.filter(r=>r.management===k).length]),total);let risks=["A - فوری","B - زیاد","C - متوسط","D - کم"];bars("riskBars",risks.map(k=>[k,records.filter(r=>r.risk===k).length]),total);let m={};records.forEach(r=>{let k=[r.zone,r.neighborhood,r.street,r.section].filter(Boolean).join(" / ")||"نامشخص";m[k]??={n:0,bad:0};m[k].n++;if(r.priority==="P1"||r.priority==="P2"||r.management==="4")m[k].bad++});let hot=Object.entries(m).map(([k,v])=>[k,v.bad,v.n,v.n?Math.round(v.bad/v.n*100):0]).sort((a,b)=>b[3]-a[3]).slice(0,15);$("hotspots").innerHTML=hot.length?hot.map(x=>`<div class="record"><b>${esc(x[0])}</b><div class="small">${x[1]} مورد اولویت‌دار از ${x[2]} رکورد (${x[3]}٪)</div></div>`).join(""):"<p class='muted'>داده کافی وجود ندارد.</p>"}
+async function saveTree(e){
+  e.preventDefault();const risk=calcRisk();const id=editingId||uid();const old=await get('trees',id);const record={
+    id,tree_code:old?.tree_code||null,created_by:old?.created_by||profile?.id||session?.user?.id||null,updated_by:profile?.id||session?.user?.id||null,
+    zone_id:val('zone')||null,neighborhood_id:val('neighborhood')||null,place_id:val('street')||null,section_name:val('section'),route_side:val('side'),local_position:val('landmark'),
+    latitude:currentGps?.latitude??old?.latitude??null,longitude:currentGps?.longitude??old?.longitude??null,species:val('species'),age_class:val('ageClass'),dbh_cm:num('dbh'),height_m:num('height'),crown_diameter_m:num('crown'),
+    crown_health:num('crownScore'),trunk_health:num('trunkScore'),root_collar_health:num('rootScore'),pest_disease_score:Math.max(num('pest')||0,num('disease')||0),irrigation_site_score:Math.max(num('irrigation')||0,num('site')||0),structural_score:num('structural'),failure_likelihood:num('failure'),
+    risk_level:risk.risk_level,priority:risk.priority,management_group:num('management'),recommended_action:val('action'),symptoms:val('symptoms'),notes:val('notes'),device_id:await deviceId(),captured_at:old?.captured_at||nowIso(),created_at:old?.created_at||nowIso(),updated_at:nowIso(),sync_revision:old?.sync_revision||1,
+    _syncState:'pending',_serverUpdatedAt:old?._serverUpdatedAt||null,_localUpdatedAt:nowIso(),_locationNames:{zone:locName(val('zone')),neighborhood:locName(val('neighborhood')),place:locName(val('street'))}
+  };
+  await put('trees',record);
+  for(const file of selectedPhotoFiles){await put('photos',{id:uid(),tree_id:id,blob:file,mime:file.type||'image/jpeg',name:file.name||'photo.jpg',created_at:nowIso(),_syncState:'pending'});}
+  toast('رکورد روی گوشی ذخیره شد');resetForm();renderRecords();if(isOnline())syncAll();
+}
+async function deviceId(){let d=await metaGet('deviceId');if(!d){d=uid();await metaSet('deviceId',d)}return d}
+function resetForm(){editingId=null;$('treeForm').reset();currentGps=null;selectedPhotoFiles=[];$('photoPreview').innerHTML='';$('gpsText').textContent='ثبت نشده';$('mapCurrentBtn').disabled=true;$('treeIdPreview').textContent='پس از ثبت، سرور کد نهایی می‌سازد';calcRisk()}
 
-function flat(r){return{"شناسه خودکار":r.treeId,"تاریخ بازدید":r.visitDate,"بازدیدکننده":r.inspector,"ناحیه":r.zone,"محله":r.neighborhood,"نوع محدوده":r.areaType,"خیابان/بوستان":r.street,"بخش/قطعه":r.section,"سمت":r.side,"نقطه مرجع":r.landmark,"گونه":r.species,"مرحله سنی":r.ageClass,"عرض جغرافیایی":r.lat,"طول جغرافیایی":r.lon,"لینک نقشه":r.lat!=null?mapUrl(r.lat,r.lon):"","تعداد عکس":(r.photos||[]).length,"DBH_cm":r.dbh,"ارتفاع_m":r.height,"قطر تاج_m":r.crown,"سلامت تاج":labelScore(r.crownScore),"سلامت تنه":labelScore(r.trunkScore),"ریشه/طوقه":labelScore(r.rootScore),"شدت آفت":r.pest,"شدت بیماری":r.disease,"آبیاری کد":r.irrigation,"بستر کد":r.site,"تعارض":r.conflict,"علائم/توضیح":r.symptoms,"نقص سازه‌ای":r.structural,"احتمال شکست":r.failure,"سطح خطر":r.risk,"امتیاز اولویت":r.score,"اولویت":r.priority,"گروه مدیریتی":r.management,"اقدام":r.action,"یادداشت":r.notes}}
-function utf8b64(str){let bytes=new TextEncoder().encode(str),bin="";bytes.forEach(b=>bin+=String.fromCharCode(b));return btoa(bin)}
-async function saveOrShare(name,content,mime){let fs=window.Capacitor?.Plugins?.Filesystem,sh=window.Capacitor?.Plugins?.Share;if(fs&&sh){try{await fs.writeFile({path:name,data:utf8b64(content),directory:"CACHE",recursive:true});let u=await fs.getUri({path:name,directory:"CACHE"});await sh.share({title:name,text:"خروجی سامانه شناسنامه درختان شهرضا",url:u.uri,dialogTitle:"ذخیره یا ارسال فایل"});toast("فایل آماده شد");return}catch(e){console.error(e)}}let b=new Blob([content],{type:mime}),a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);toast("فایل خروجی ساخته شد")}
-$("exportCsv").onclick=async()=>{let a=records.map(flat);if(!a.length)return toast("داده‌ای وجود ندارد");let hs=Object.keys(a[0]),q=s=>'"'+String(s??"").replaceAll('"','""')+'"';await saveOrShare("Shahreza_Trees_v02.csv","\uFEFF"+hs.map(q).join(",")+"\n"+a.map(r=>hs.map(h=>q(r[h])).join(",")).join("\n"),"text/csv;charset=utf-8")};
-$("exportExcel").onclick=async()=>{let a=records.map(flat);if(!a.length)return toast("داده‌ای وجود ندارد");let hs=Object.keys(a[0]),xe=s=>String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"),xml='<?xml version="1.0"?><?mso-application progid="Excel.Sheet"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Worksheet ss:Name="Trees"><Table>';xml+="<Row>"+hs.map(h=>`<Cell><Data ss:Type="String">${xe(h)}</Data></Cell>`).join("")+"</Row>";a.forEach(r=>xml+="<Row>"+hs.map(h=>`<Cell><Data ss:Type="String">${xe(r[h])}</Data></Cell>`).join("")+"</Row>");xml+="</Table></Worksheet></Workbook>";await saveOrShare("Shahreza_Trees_v02.xls","\uFEFF"+xml,"application/vnd.ms-excel")};
-$("backupJson").onclick=async()=>await saveOrShare("Shahreza_Trees_Backup_v02.json",JSON.stringify({appVersion:APP_VERSION,records,cfg},null,2),"application/json");
-$("restoreJson").onchange=e=>{let f=e.target.files[0];if(!f)return;let rr=new FileReader();rr.onload=async()=>{try{let x=JSON.parse(rr.result),arr=Array.isArray(x)?x:(x.records||[]);await dbClear();for(const r of arr)await dbPut(r);if(x.cfg){cfg={zones:uniq([...DEFAULTS.zones,...(x.cfg.zones||[])]),neighborhoods:uniq([...DEFAULTS.neighborhoods,...(x.cfg.neighborhoods||[])]),streets:uniq([...DEFAULTS.streets,...(x.cfg.streets||[])]),sections:uniq([...DEFAULTS.sections,...(x.cfg.sections||[])])};persistCfg()}await reload();toast("بازیابی شد")}catch(err){console.error(err);toast("فایل معتبر نیست")}};rr.readAsText(f)};
-$("clearAll").onclick=async()=>{if(confirm("همه رکوردها حذف شوند؟")){await dbClear();await reload();toast("همه رکوردها حذف شد")}};
+function toServerTree(r){const out={};['id','tree_code','created_by','updated_by','zone_id','neighborhood_id','place_id','section_name','route_side','local_position','latitude','longitude','species','age_class','dbh_cm','height_m','crown_diameter_m','crown_health','trunk_health','root_collar_health','pest_disease_score','irrigation_site_score','structural_score','failure_likelihood','risk_level','priority','management_group','recommended_action','symptoms','notes','device_id','captured_at'].forEach(k=>{if(r[k]!==undefined)out[k]=r[k]});if(!out.tree_code)delete out.tree_code;return out}
 
-document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{document.querySelectorAll(".tabs button,.tab").forEach(x=>x.classList.remove("active"));b.classList.add("active");$(b.dataset.tab).classList.add("active");if(b.dataset.tab==="records")renderRecords();if(b.dataset.tab==="dashboard")renderDashboard();if(b.dataset.tab==="settings")renderLists()});
+async function syncAll(){
+  if(syncBusy)return;if(!isOnline()||!session){$('syncStatus').textContent='آفلاین؛ داده‌ها روی گوشی محفوظ‌اند';return}
+  syncBusy=true;$('syncStatus').textContent='در حال همگام‌سازی...';
+  try{await pushTrees();await pushPhotos();await pullTrees();await refreshLocations();await metaSet('lastSyncAt',nowIso());$('syncStatus').textContent='همگام‌سازی کامل شد';toast('همگام‌سازی انجام شد');}
+  catch(e){$('syncStatus').textContent='همگام‌سازی ناقص؛ اطلاعات محلی محفوظ است';console.error(e)}finally{syncBusy=false;renderRecords();}
+}
+async function pushTrees(){
+  const trees=await getAll('trees');for(const r of trees.filter(x=>x._syncState==='pending')){
+    if(r._serverUpdatedAt){const {data:server}=await supabase.from('trees').select('updated_at,sync_revision').eq('id',r.id).maybeSingle();if(server&&new Date(server.updated_at)>new Date(r._serverUpdatedAt)){r._syncState='conflict';await put('trees',r);continue}}
+    const {data,error}=await supabase.from('trees').upsert(toServerTree(r),{onConflict:'id'}).select().single();if(error){r._syncState='error';r._syncError=error.message;await put('trees',r);continue}Object.assign(r,data,{_syncState:'synced',_serverUpdatedAt:data.updated_at,_syncError:null});await put('trees',r);
+  }
+}
+async function pushPhotos(){
+  const photos=await getAll('photos');for(const p of photos.filter(x=>x._syncState==='pending')){
+    const tree=await get('trees',p.tree_id);if(!tree||tree._syncState!=='synced')continue;const userId=session.user.id;const ext=(p.mime?.split('/')[1]||'jpg').replace('jpeg','jpg');const path=`${userId}/${p.tree_id}/${p.id}.${ext}`;
+    const {error:upErr}=await supabase.storage.from('tree-photos').upload(path,p.blob,{contentType:p.mime,upsert:true});if(upErr){p._syncState='error';p._syncError=upErr.message;await put('photos',p);continue}
+    const {error:dbErr}=await supabase.from('tree_photos').upsert({id:p.id,tree_id:p.tree_id,storage_path:path,created_by:userId},{onConflict:'id'});if(dbErr){p._syncState='error';p._syncError=dbErr.message;await put('photos',p);continue}p.storage_path=path;p._syncState='synced';await put('photos',p);
+  }
+}
+async function pullTrees(){
+  const last=await metaGet('lastSyncAt','1970-01-01T00:00:00Z');const {data,error}=await supabase.from('trees').select('*').gte('updated_at',last).order('updated_at');if(error)throw error;for(const s of data||[]){const l=await get('trees',s.id);if(l&&['pending','conflict'].includes(l._syncState))continue;await put('trees',{...l,...s,_syncState:'synced',_serverUpdatedAt:s.updated_at,_localUpdatedAt:l?._localUpdatedAt||s.updated_at,_locationNames:{zone:locName(s.zone_id),neighborhood:locName(s.neighborhood_id),place:locName(s.place_id)}})}
+}
 
-(async function init(){try{await openDB();records=await dbAll();await migrateOld();records=await dbAll();persistCfg();refreshSelects();renderPhotoPreview();calc();renderDashboard();renderRecords()}catch(e){console.error(e);alert("خطا در راه‌اندازی پایگاه داده برنامه")}})();
+async function renderRecords(){
+  if(!db)return;let rows=await getAll('trees');const q=val('search').trim().toLowerCase();if(q)rows=rows.filter(r=>[r.tree_code,r.species,r.section_name,r.local_position,r._locationNames?.zone,r._locationNames?.neighborhood,r._locationNames?.place].join(' ').toLowerCase().includes(q));rows.sort((a,b)=>new Date(b.captured_at)-new Date(a.captured_at));$('recordsList').innerHTML=rows.length?rows.map(r=>`<div class="record"><div class="recordHead"><div><b>${safe(r.tree_code||'کد موقت '+r.id.slice(0,8))}</b><div class="recordMeta">${safe(r._locationNames?.place||locName(r.place_id)||'بدون محدوده')} • ${safe(r.species||'گونه نامشخص')}</div></div><span class="status ${r._syncState==='synced'?'synced':r._syncState==='conflict'?'conflict':'pending'}">${r._syncState==='synced'?'همگام':r._syncState==='conflict'?'تعارض':'در انتظار'}</span></div><div class="recordMeta">${safe(r.priority||'')} • ${safe(r.risk_level||'')} • ${new Date(r.captured_at).toLocaleString('fa-IR')}</div><div class="toolbar"><button onclick="window.__detail('${r.id}')">جزئیات</button><button onclick="window.__edit('${r.id}')">ویرایش</button>${r.latitude&&r.longitude?`<button onclick="window.__map(${r.latitude},${r.longitude})">نقشه</button>`:''}</div></div>`).join(''):'<p class="muted">هنوز رکوردی ثبت نشده است.</p>';
+}
+window.__detail=id=>showDetail(id);window.__edit=id=>editTree(id);window.__map=(a,b)=>openMap(a,b);
+async function showDetail(id){
+  const r=await get('trees',id),photos=(await getAll('photos')).filter(p=>p.tree_id===id);let imgs='';for(const p of photos){if(p.blob){imgs+=`<img src="${URL.createObjectURL(p.blob)}">`}}
+  $('detailBody').innerHTML=`<div class="card"><h2>${safe(r.tree_code||'کد موقت')}</h2><p><b>ثبت‌کننده:</b> ${safe(r.created_by||'')}</p><p><b>محل:</b> ${safe(r._locationNames?.zone||locName(r.zone_id))} / ${safe(r._locationNames?.neighborhood||locName(r.neighborhood_id))} / ${safe(r._locationNames?.place||locName(r.place_id))}</p><p><b>بخش:</b> ${safe(r.section_name||'-')} • <b>سمت:</b> ${safe(r.route_side||'-')}</p><p><b>گونه:</b> ${safe(r.species||'-')} • <b>مرحله سنی:</b> ${safe(r.age_class||'-')}</p><p><b>GPS:</b> ${r.latitude?`${r.latitude}, ${r.longitude}`:'ثبت نشده'} ${r.latitude?`<button onclick="window.__map(${r.latitude},${r.longitude})">نمایش روی نقشه</button>`:''}</p><p><b>خطر:</b> ${safe(r.risk_level||'-')} • <b>اولویت:</b> ${safe(r.priority||'-')} • <b>گروه:</b> ${safe(r.management_group||'-')}</p><p><b>اقدام:</b> ${safe(r.recommended_action||'-')}</p><p><b>علائم:</b> ${safe(r.symptoms||'-')}</p><p><b>یادداشت:</b> ${safe(r.notes||'-')}</p><div class="detailPhotos">${imgs||'<span class="muted">عکس محلی ندارد</span>'}</div><p><b>وضعیت همگام‌سازی:</b> ${safe(r._syncState||'')}</p></div>`;$('detailDialog').showModal();
+}
+async function editTree(id){const r=await get('trees',id);editingId=id;const set=(x,v)=>{if($(x)&&v!==null&&v!==undefined)$(x).value=String(v)};set('zone',r.zone_id);set('neighborhood',r.neighborhood_id);set('street',r.place_id);set('section',r.section_name);set('side',r.route_side);set('landmark',r.local_position);set('species',r.species);set('ageClass',r.age_class);set('dbh',r.dbh_cm);set('height',r.height_m);set('crown',r.crown_diameter_m);set('crownScore',r.crown_health);set('trunkScore',r.trunk_health);set('rootScore',r.root_collar_health);set('structural',r.structural_score);set('failure',r.failure_likelihood);set('management',r.management_group);set('action',r.recommended_action);set('symptoms',r.symptoms);set('notes',r.notes);currentGps=r.latitude?{latitude:r.latitude,longitude:r.longitude}:null;$('gpsText').textContent=currentGps?`${r.latitude}, ${r.longitude}`:'ثبت نشده';$('mapCurrentBtn').disabled=!currentGps;$('treeIdPreview').textContent=r.tree_code||'کد هنوز از سرور دریافت نشده';calcRisk();showTab('form',document.querySelector('[data-tab=form]'));window.scrollTo({top:0,behavior:'smooth'});}
+
+async function renderDashboard(){const rows=await getAll('trees');const p1=rows.filter(x=>x.priority==='P1').length,g4=rows.filter(x=>Number(x.management_group)===4).length,pending=rows.filter(x=>x._syncState!=='synced').length;$('kpis').innerHTML=`<div class="kpi"><span>کل رکورد</span><b>${rows.length}</b></div><div class="kpi"><span>P1</span><b>${p1}</b></div><div class="kpi"><span>گروه ۴</span><b>${g4}</b></div><div class="kpi"><span>در انتظار Sync</span><b>${pending}</b></div>`;renderBars('groupBars',[1,2,3,4].map(n=>[`گروه ${n}`,rows.filter(x=>Number(x.management_group)===n).length]));renderBars('riskBars',['A','B','C','D'].map(c=>[c,rows.filter(x=>(x.risk_level||'').startsWith(c)).length]));const m={};rows.forEach(x=>{const k=x._locationNames?.place||locName(x.place_id)||'نامشخص';m[k]=(m[k]||0)+1});$('hotspots').innerHTML=Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([k,v])=>`<div>${safe(k)} — <b>${v}</b></div>`).join('')||'<p class="muted">داده‌ای نیست</p>'}
+function renderBars(id,arr){const max=Math.max(1,...arr.map(x=>x[1]));$(id).innerHTML=arr.map(([k,v])=>`<div class="barrow"><span>${k}</span><div class="bar"><i style="width:${(v/max)*100}%"></i></div><b>${v}</b></div>`).join('')}
+
+async function renderSettings(){await loadLocalLocations();const names=t=>locationsCache.filter(x=>t.includes(x.type)).sort((a,b)=>a.name.localeCompare(b.name,'fa')).map(x=>safe(x.name)).join('، ');$('zonesList').innerHTML=names(['zone'])||'<span class="muted">پس از دریافت فهرست رسمی تکمیل می‌شود.</span>';$('neighborhoodsList').innerHTML=names(['neighborhood']);$('streetsList').innerHTML=names(['street','boulevard','park']);}
+async function addLocation(){if(profile?.role!=='admin'||!isOnline()){toast('این کار نیازمند مدیر آنلاین است');return}const type=val('newLocationType'),name=val('newLocationName').trim(),code=val('newLocationCode').trim().toUpperCase();if(!name||!code){toast('نام و کد را وارد کنید');return}const {data,error}=await supabase.from('locations').insert({type,name,code}).select().single();if(error){toast(error.message);return}await put('locations',data);$('newLocationName').value='';$('newLocationCode').value='';await renderSettings();fillLocationSelects();toast('به بانک مرکزی اضافه شد')}
+
+async function renderTeam(){if(profile?.role!=='admin')return;const {data,error}=await supabase.from('profiles').select('*').order('created_at');if(error){$('teamList').textContent=error.message;return}$('teamList').innerHTML=(data||[]).map(u=>`<div class="teamRow"><div><b>${safe(u.full_name||u.id)}</b><div class="muted">${u.id.slice(0,8)}…</div></div><select onchange="window.__role('${u.id}',this.value)"><option value="inspector" ${u.role==='inspector'?'selected':''}>کارشناس</option><option value="admin" ${u.role==='admin'?'selected':''}>مدیر</option></select><select onchange="window.__active('${u.id}',this.value)"><option value="1" ${u.is_active?'selected':''}>فعال</option><option value="0" ${!u.is_active?'selected':''}>غیرفعال</option></select></div>`).join('')}
+window.__role=async(id,role)=>{const {error}=await supabase.from('profiles').update({role}).eq('id',id);if(error)toast(error.message);else{toast('نقش تغییر کرد');if(id===profile.id){await loadProfile();showApp()}renderTeam()}};
+window.__active=async(id,v)=>{const {error}=await supabase.from('profiles').update({is_active:v==='1'}).eq('id',id);if(error)toast(error.message);else{toast('وضعیت تغییر کرد');renderTeam()}};
+
+async function exportExcel(){const rows=await getAll('trees');const data=rows.map(r=>({کد:r.tree_code||r.id,ناحیه:r._locationNames?.zone||locName(r.zone_id),محله:r._locationNames?.neighborhood||locName(r.neighborhood_id),محدوده:r._locationNames?.place||locName(r.place_id),بخش:r.section_name,گونه:r.species,عرض_جغرافیایی:r.latitude,طول_جغرافیایی:r.longitude,اولویت:r.priority,خطر:r.risk_level,گروه:r.management_group,اقدام:r.recommended_action,وضعیت_همگام:r._syncState}));const wb=XLSX.utils.book_new(),ws=XLSX.utils.json_to_sheet(data);XLSX.utils.book_append_sheet(wb,ws,'Trees');const bytes=XLSX.write(wb,{bookType:'xlsx',type:'array'});await shareBinary(bytes,`Shahreza_Trees_${new Date().toISOString().slice(0,10)}.xlsx`,'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')}
+async function shareBinary(bytes,name,mime){try{const base64=arrayBufferToBase64(bytes);const w=await Filesystem.writeFile({path:name,data:base64,directory:Directory.Cache});await Share.share({title:name,url:w.uri,dialogTitle:'ذخیره یا اشتراک فایل'});}catch(e){const blob=new Blob([bytes],{type:mime});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();}}
+function arrayBufferToBase64(buffer){let binary='';const bytes=new Uint8Array(buffer);for(let i=0;i<bytes.byteLength;i++)binary+=String.fromCharCode(bytes[i]);return btoa(binary)}
+async function backupJson(){const payload={version:'0.3',created_at:nowIso(),trees:await getAll('trees'),locations:await getAll('locations')};const text=JSON.stringify(payload,null,2);try{const w=await Filesystem.writeFile({path:`Shahreza_Backup_${Date.now()}.json`,data:btoa(unescape(encodeURIComponent(text))),directory:Directory.Cache});await Share.share({title:'پشتیبان سامانه درختان',url:w.uri});}catch(e){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'application/json'}));a.download='Shahreza_Backup.json';a.click()}}
+async function restoreJson(e){const f=e.target.files?.[0];if(!f)return;try{const data=JSON.parse(await f.text());for(const r of data.trees||[])await put('trees',{...r,_syncState:r._syncState==='synced'?'pending':r._syncState||'pending'});for(const l of data.locations||[])await put('locations',l);await loadLocalLocations();renderRecords();toast('پشتیبان بازیابی شد');}catch(err){toast('فایل پشتیبان معتبر نیست')}}
+
+init().catch(e=>{console.error(e);$('authMsg').textContent='خطا در راه‌اندازی برنامه: '+e.message});

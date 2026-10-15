@@ -1,0 +1,28 @@
+Shahreza Tree Survey v0.3 — Multi-user Offline-First
+
+Backend: Supabase project Shahreza Tree Survey (configured)
+Roles: 1 initial admin + configurable inspectors (4, 5, or more)
+
+Main changes:
+- Email/password login and signup
+- First account can claim initial admin role automatically
+- Admin team panel: change user role between admin/inspector and active/inactive status
+- Offline-first storage: each tree is saved to IndexedDB on the phone first
+- Automatic server sync when online
+- Pending/synced/conflict status per record
+- Central Supabase tables for profiles, locations, trees, and photos
+- Private Supabase Storage bucket for tree photos
+- Local photos remain on the capturing device; copies are uploaded to server
+- All tree data is pulled from the server and cached locally on logged-in devices
+- Automatic server-side tree code generation
+- GPS capture via Capacitor Geolocation and map opening
+- XLSX export via SheetJS + Capacitor Filesystem/Share
+- JSON local backup/restore independent of server
+- Default Shahreza neighborhood included
+- Initial public-data streets, boulevards, parks, and neighborhoods included on server
+- Admin-only central base-location editing
+
+Important for production:
+- Replace temporary Shahreza zone with official municipality zone/neighborhood/street/park lists after the next meeting.
+- Before field deployment, configure a persistent Android release signing key in GitHub Actions so updates install over previous versions without uninstalling.
+- For very large deployments, add selective photo caching / central backup policy to avoid filling every phone with all images.
