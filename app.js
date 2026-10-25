@@ -114,7 +114,18 @@ function showTab(id,btn){document.querySelectorAll('.tab').forEach(x=>x.classLis
 
 async function login(){
   $('authMsg').textContent='در حال ورود...';
-  const {data,error}=await supabase.auth.signInWithPassword({email:val('loginEmail').trim(),password:val('loginPassword')});
+  const emailInput=document.getElementById('loginEmail');
+  const passwordInput=document.getElementById('loginPassword');
+  emailInput?.blur();
+  passwordInput?.blur();
+  await new Promise(r=>setTimeout(r,150));
+  const email=(emailInput?.value||'').trim().toLowerCase();
+  const password=passwordInput?.value||'';
+  if(!email||!password){
+    $('authMsg').textContent='ایمیل و رمز عبور را کامل وارد کنید.';
+    return;
+  }
+  const {data,error}=await supabase.auth.signInWithPassword({email,password});
   if(error){$('authMsg').textContent='ورود انجام نشد: '+error.message;return}
   session=data.session;offlineMode=false;await loadProfile();await metaSet('cachedProfile',profile);showApp();await refreshLocations();await syncAll();
 }
