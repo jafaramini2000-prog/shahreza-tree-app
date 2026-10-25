@@ -87,12 +87,23 @@ async function init(){
   bindUI();
   updateNetStatus();
   const cachedProfile=await metaGet('cachedProfile');
-  const {data:{session:s}}=await supabase.auth.getSession();
-  session=s;
-  if(session){await loadProfile();showApp();await refreshLocations();await syncAll();}
-  else if(cachedProfile){$('offlineEntry').hidden=false;}
+  if(cachedProfile)$('offlineEntry').hidden=false;
+  try{
+    const {data:{session:s}}=await supabase.auth.getSession();
+    session=s;
+    if(session){
+      await loadProfile();
+      if(profile)await metaSet('cachedProfile',profile);
+      showApp();
+      if(navigator.onLine){await refreshLocations();await syncAll();}
+      else{offlineMode=true;updateNetStatus();}
+    }
+  }catch(e){
+    session=null;
+    if(cachedProfile)$('offlineEntry').hidden=false;
+  }
   window.addEventListener('online',async()=>{offlineMode=false;updateNetStatus();await tryRestoreSessionAndSync();});
-  window.addEventListener('offline',updateNetStatus);
+  window.addEventListener('offline',async()=>{updateNetStatus();const cp=await metaGet('cachedProfile');if(cp)$('offlineEntry').hidden=false;});
   if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});
 }
 
@@ -126,7 +137,12 @@ async function login(){
     return;
   }
   const {data,error}=await supabase.auth.signInWithPassword({email,password});
-  if(error){$('authMsg').textContent='ورود انجام نشد: '+error.message;return}
+  if(error){
+    $('authMsg').textContent='ورود انجام نشد: '+error.message;
+    const cp=await metaGet('cachedProfile');
+    if(cp)$('offlineEntry').hidden=false;
+    return;
+  }
   session=data.session;offlineMode=false;await loadProfile();await metaSet('cachedProfile',profile);showApp();await refreshLocations();await syncAll();
 }
 async function signup(){
